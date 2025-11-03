@@ -1,0 +1,4 @@
+* { box-sizing: border-box; }
+html, body, #__next { height: 100%; }
+body { margin: 0; background: #0f2a24; color: #fff; }
+button { cursor: pointer; }
