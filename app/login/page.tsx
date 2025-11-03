@@ -13,15 +13,18 @@ export default function LoginPage() {
       alert("Digite um e-mail");
       return;
     }
-    // guarda o "usuário" e redireciona
+    // guarda o “usuário” e redireciona
     localStorage.setItem("acerto_email", email);
-    router.push("/"); // se quiser outra página, troque aqui p/ "/groups"
+    router.push("/groups"); // <<<<<<<<<<  VAI PARA /groups
   }
 
   return (
     <main style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
       <div style={{ width: 320, padding: 24, background: "#12352d", borderRadius: 12 }}>
-        <h2 style={{ marginTop: 0 }}>Login</h2>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+          <img src="/logo.svg" alt="AcertÔ" style={{ height: 28 }} />
+          <h2 style={{ margin: 0 }}>Login</h2>
+        </div>
 
         <label style={{ display: "block", marginBottom: 8 }}>E-mail</label>
         <input
