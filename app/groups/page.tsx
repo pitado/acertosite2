@@ -12,7 +12,7 @@ export default function GroupsPage() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
 
-  // pega o "usuário" salvo no login
+  // carrega e-mail do "login"
   useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem("acerto_email") : "";
     if (saved) setEmail(saved);
@@ -22,16 +22,15 @@ export default function GroupsPage() {
     if (!email) return;
     setLoading(true);
     setMsg("");
-    const res = await fetch(`/api/groups?ownerEmail=${encodeURIComponent(email)}`);
+    const res = await fetch(`/api/groups?ownerEmail=${encodeURIComponent(email)}`); // << backticks ok
     const data = await res.json();
     setGroups(Array.isArray(data) ? data : []);
     setLoading(false);
   }
 
-  async function createGroup(e?: React.FormEvent) {
-    e?.preventDefault();
-    if (!email || !name.trim()) {
-      setMsg("Preencha o nome do grupo.");
+  async function createGroup() {
+    if (!email || !name) {
+      setMsg("Preencha e-mail e nome do grupo");
       return;
     }
     setLoading(true);
@@ -39,10 +38,10 @@ export default function GroupsPage() {
     const res = await fetch("/api/groups", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim(), ownerEmail: email }),
+      body: JSON.stringify({ name, ownerEmail: email }),
     });
     const data = await res.json();
-    if (!res.ok) setMsg(`Erro: ${data?.error || "desconhecido"}`);
+    if (!res.ok) setMsg(`Erro: ${data?.error || "desconhecido"}`); // << backticks ok
     setName("");
     await load();
   }
@@ -50,60 +49,59 @@ export default function GroupsPage() {
   useEffect(() => { if (email) load(); }, [email]);
 
   return (
-    <main className="login-wrap" style={{ paddingTop: 40 }}>
-      <div className="card" style={{ maxWidth: 760 }}>
-        <div className="logo" style={{ justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <img src="/logo.svg" alt="AcertÔ" style={{ height: 36 }} />
-            <h1 style={{ margin: 0 }}>Seus Grupos</h1>
-          </div>
-          <div style={{ fontSize: 14, color: "var(--muted)" }}>
-            {email ? `Logado como: ${email}` : <Link href="/login" className="link">Fazer login</Link>}
-          </div>
+    <main style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
+      <div style={{ width: 560, padding: 24, background: "#12352d", borderRadius: 12 }}>
+        <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 8 }}>
+          <img src="/logo.svg" alt="AcertÔ" style={{ height: 28 }} />
+          <h1 style={{ margin: 0 }}>AcertÔ — Grupos</h1>
+          <span style={{ marginLeft: "auto", color: "#a7d4ff", fontSize: 12 }}>{email}</span>
         </div>
 
-        <form onSubmit={createGroup} style={{ display: "grid", gap: 12, gridTemplateColumns: "1fr auto" }}>
+        <div style={{ display: "grid", gap: 12, gridTemplateColumns: "1fr 1fr" }}>
           <input
-            className="input"
-            placeholder="Nome do novo grupo (ex.: Viagem Floripa)"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Seu e-mail (owner)"
+            style={{ padding: 10, borderRadius: 8, border: "1px solid #2b5e50" }}
+          />
+          <input
             value={name}
             onChange={(e) => setName(e.target.value)}
+            placeholder="Nome do grupo"
+            style={{ padding: 10, borderRadius: 8, border: "1px solid #2b5e50" }}
           />
-          <button className="btn" type="submit">Criar</button>
-        </form>
+        </div>
+
+        <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
+          <button
+            onClick={createGroup}
+            style={{ padding: 10, borderRadius: 8, border: "none", background: "#1dd1a1", color: "#07251f", fontWeight: 600 }}
+          >
+            Criar grupo
+          </button>
+          <button
+            onClick={load}
+            style={{ padding: 10, borderRadius: 8, border: "1px solid #2b5e50", background: "transparent", color: "#fff" }}
+          >
+            Atualizar lista
+          </button>
+          <Link href="/login" style={{ alignSelf: "center", marginLeft: "auto", color: "#a7d4ff" }}>
+            Trocar usuário
+          </Link>
+        </div>
 
         {msg && <p style={{ marginTop: 12, color: "#ffb3b3" }}>{msg}</p>}
         {loading && <p style={{ marginTop: 12 }}>Carregando…</p>}
 
-        <div className="hr" />
-
-        <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 10 }}>
+        <ul style={{ marginTop: 16, paddingLeft: 18 }}>
           {groups.map((g) => (
-            <li key={g.id} style={{
-              background: "#0b221d",
-              border: "1px solid #1b3e35",
-              borderRadius: 12,
-              padding: 14,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between"
-            }}>
-              <div>
-                <div style={{ fontWeight: 700 }}>{g.name}</div>
-                <div style={{ fontSize: 12, color: "var(--muted)" }}>
-                  {new Date(g.created_at).toLocaleString()}
-                </div>
-              </div>
-              <span style={{ fontSize: 12, color: "var(--muted)" }}>{g.owner_email}</span>
+            <li key={g.id}>
+              <b>{g.name}</b> — {g.owner_email}{" "}
+              <small>({new Date(g.created_at).toLocaleString()})</small>
             </li>
           ))}
-          {!groups.length && !loading && <li style={{ color: "var(--muted)" }}>Nenhum grupo ainda.</li>}
+          {!groups.length && !loading && <li>Nenhum grupo ainda.</li>}
         </ul>
-
-        <div className="footer" style={{ marginTop: 18 }}>
-          <Link href="/login" className="link">Trocar usuário</Link>
-          <Link href="/" className="link">Home</Link>
-        </div>
       </div>
     </main>
   );
