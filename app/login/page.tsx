@@ -9,9 +9,13 @@ export default function LoginPage() {
   const router = useRouter();
 
   function doLogin() {
-    if (!email) return alert("Digite um e-mail");
+    if (!email) {
+      alert("Digite um e-mail");
+      return;
+    }
+    // guarda o "usuário" e redireciona
     localStorage.setItem("acerto_email", email);
-    router.push("/"); // vai pra Home
+    router.push("/"); // se quiser outra página, troque aqui p/ "/groups"
   }
 
   return (
