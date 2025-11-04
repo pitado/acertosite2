@@ -1,4 +1,6 @@
 "use client";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 import Link from "next/link";
 import { useState } from "react";
@@ -31,7 +33,7 @@ export default function LoginPage() {
           "radial-gradient(circle at 30% 30%, #0f3b31 0%, #071f1a 70%)",
       }}
     >
-      {/* garante que nenhum alert antigo apareça */}
+      {/* desliga qualquer alert antigo */}
       <Script id="disable-alert" strategy="beforeInteractive">
         {`window.alert = () => {};`}
       </Script>
@@ -71,9 +73,8 @@ export default function LoginPage() {
               boxShadow: "0 4px 15px rgba(29, 209, 161, 0.4)",
             }}
           >
-            {/* use /logo.svg ou /pig.svg — o que você preferir */}
             <img
-              src="/logo.svg"
+              src="/logo.svg?v=2"
               alt="AcertÔ logo"
               style={{
                 width: 42,
