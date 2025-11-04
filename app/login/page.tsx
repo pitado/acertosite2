@@ -13,36 +13,98 @@ export default function LoginPage() {
       alert("Digite um e-mail");
       return;
     }
-    // guarda o “usuário” e redireciona
+
+    // Guarda o e-mail localmente para o sistema identificar o usuário
     localStorage.setItem("acerto_email", email);
-    router.push("/groups"); // <<<<<<<<<<  VAI PARA /groups
+
+    // Redireciona para /groups depois do login
+    router.push("/groups");
   }
 
   return (
-    <main style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-      <div style={{ width: 320, padding: 24, background: "#12352d", borderRadius: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-          <img src="/logo.svg" alt="AcertÔ" style={{ height: 28 }} />
-          <h2 style={{ margin: 0 }}>Login</h2>
+    <main
+      style={{
+        minHeight: "100vh",
+        display: "grid",
+        placeItems: "center",
+        backgroundColor: "#0b1f1b",
+      }}
+    >
+      <div
+        style={{
+          width: 320,
+          padding: 24,
+          background: "#12352d",
+          borderRadius: 16,
+          boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
+        }}
+      >
+        {/* Logo + título */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexDirection: "column",
+            gap: 8,
+            marginBottom: 20,
+          }}
+        >
+          <img src="/logo.svg" alt="AcertÔ" style={{ height: 50 }} />
+          <h2 style={{ margin: 0, color: "#e6fff7", fontWeight: 700 }}>Entrar no AcertÔ</h2>
         </div>
 
-        <label style={{ display: "block", marginBottom: 8 }}>E-mail</label>
+        {/* Campo de email */}
+        <label
+          style={{
+            display: "block",
+            marginBottom: 8,
+            color: "#a7d4ff",
+            fontSize: 14,
+          }}
+        >
+          E-mail
+        </label>
         <input
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="voce@email.com"
-          style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #2b5e50", marginBottom: 16 }}
+          type="email"
+          style={{
+            width: "100%",
+            padding: 10,
+            borderRadius: 8,
+            border: "1px solid #2b5e50",
+            background: "#0b221d",
+            color: "#e6fff7",
+            marginBottom: 16,
+          }}
         />
 
+        {/* Botão */}
         <button
           onClick={doLogin}
-          style={{ width: "100%", padding: 10, borderRadius: 8, border: "none", background: "#1dd1a1", color: "#07251f", fontWeight: 600 }}
+          style={{
+            width: "100%",
+            padding: 12,
+            borderRadius: 8,
+            border: "none",
+            background: "linear-gradient(90deg,#1dd1a1,#17b58b)",
+            color: "#062b26",
+            fontWeight: 700,
+            fontSize: 15,
+            cursor: "pointer",
+            transition: "all .2s",
+          }}
         >
           Entrar
         </button>
 
-        <div style={{ marginTop: 16, textAlign: "center" }}>
-          <Link href="/" style={{ color: "#a7d4ff" }}>Voltar para Home</Link>
+        {/* Link inferior */}
+        <div style={{ marginTop: 18, textAlign: "center" }}>
+          <Link href="/" style={{ color: "#a7d4ff", fontSize: 14 }}>
+            Voltar para Home
+          </Link>
         </div>
       </div>
     </main>
