@@ -31,7 +31,7 @@ export default function LoginPage() {
           "radial-gradient(circle at 30% 30%, #0f3b31 0%, #071f1a 70%)",
       }}
     >
-      {/* Desativa qualquer alert residual */}
+      {/* garante que nenhum alert antigo apareça */}
       <Script id="disable-alert" strategy="beforeInteractive">
         {`window.alert = () => {};`}
       </Script>
@@ -49,7 +49,6 @@ export default function LoginPage() {
           textAlign: "center",
         }}
       >
-        {/* LOGO animada */}
         <motion.div
           initial={{ scale: 0, rotate: -15, opacity: 0 }}
           animate={{ scale: 1, rotate: 0, opacity: 1 }}
@@ -72,6 +71,7 @@ export default function LoginPage() {
               boxShadow: "0 4px 15px rgba(29, 209, 161, 0.4)",
             }}
           >
+            {/* use /logo.svg ou /pig.svg — o que você preferir */}
             <img
               src="/logo.svg"
               alt="AcertÔ logo"
@@ -84,7 +84,6 @@ export default function LoginPage() {
           </div>
         </motion.div>
 
-        {/* Título */}
         <motion.h1
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -100,7 +99,6 @@ export default function LoginPage() {
           Bem-vindo ao AcertÔ
         </motion.h1>
 
-        {/* Campo de e-mail */}
         <label
           style={{
             display: "block",
@@ -138,7 +136,6 @@ export default function LoginPage() {
           </p>
         )}
 
-        {/* Botão com animação */}
         <motion.button
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.98 }}
