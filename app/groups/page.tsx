@@ -205,15 +205,19 @@ export default function GroupsPage() {
   return (
     <div className="min-h-screen bg-[#0f2a24] text-white p-4 md:p-8">
       <header className="max-w-6xl mx-auto flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
-            <span className="text-emerald-300">AcertÔ</span>{" "}
-            <span className="text-emerald-100/80">— Grupos</span>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight flex items-center gap-3">
+            <span className="text-emerald-300">AcertÔ</span>
+            {/* porquinho no lugar do “— Grupos” */}
+            <img
+              src="/pig.svg" /* altere para /logo.svg se for o nome do seu arquivo */
+              alt="AcertÔ"
+              className="h-8 w-8 md:h-10 md:w-10 drop-shadow-[0_2px_6px_rgba(0,0,0,.35)]"
+            />
           </h1>
-          <p className="text-sm text-emerald-200/80 mt-1">
-            Crie, convide, registre despesas e acompanhe o rolê.
-          </p>
+          <span className="sr-only">Grupos</span>
         </div>
+
         <button
           onClick={() => {
             setEditing(null);
@@ -447,7 +451,7 @@ function GroupCard({
             <ExpenseModal
               open={true}
               onClose={() => setExpOpen(false)}
-              members={[ownerEmail]} // TODO: trocar pela lista de membros do grupo
+              members={[ownerEmail]} // TODO: trocar pela lista real de membros do grupo
               onSave={handleExpenseCreate}
             />
           )}
@@ -612,13 +616,11 @@ function ExpenseModal({
       proof_url: null,
       paid: false,
       created_at: new Date().toISOString(),
-      group_id: "", // backend ignora, só para satisfazer tipo no Omit
-      id: "", // idem
+      group_id: "",
+      id: "",
     } as any);
   }
 
-  // Mantive o guard, mas agora o componente é sempre renderizado dentro de <AnimatePresence>,
-  // então este return não “fica solto” e não quebra o parser.
   if (!open) return null;
 
   return (
