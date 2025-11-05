@@ -32,14 +32,17 @@ export default function LoginPage() {
       style={{
         minHeight: "100vh",
         display: "flex",
+        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
         background:
           "radial-gradient(circle at 30% 30%, #0f3b31 0%, #071f1a 70%)",
         color: "#e6fff7",
-        padding: 16,
+        position: "relative",
+        overflow: "hidden",
       }}
     >
+      {/* BLOCO CENTRAL */}
       <div
         style={{
           width: "min(460px, 90vw)",
@@ -50,6 +53,7 @@ export default function LoginPage() {
           textAlign: "center",
         }}
       >
+        {/* LOGO + TÍTULOS */}
         <div
           style={{
             display: "flex",
@@ -69,7 +73,7 @@ export default function LoginPage() {
             }}
           />
 
-          {/* TÍTULO COM HOVER */}
+          {/* TÍTULO */}
           <h1
             style={{
               margin: 0,
@@ -94,7 +98,7 @@ export default function LoginPage() {
             Bem-vindo ao AcertÔ
           </h1>
 
-          {/* SLOGAN COM HOVER */}
+          {/* SLOGAN */}
           <p
             style={{
               margin: 0,
@@ -159,6 +163,32 @@ export default function LoginPage() {
             Continuar com Google
           </span>
         </button>
+      </div>
+
+      {/* ASSINATURA “Feito por Pita” */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 12,
+          left: "50%",
+          transform: "translateX(-50%)",
+          opacity: 0.5,
+          transition: "opacity 0.3s ease, transform 0.3s ease",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.opacity = "0.9";
+          e.currentTarget.style.transform = "translateX(-50%) scale(1.05)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.opacity = "0.5";
+          e.currentTarget.style.transform = "translateX(-50%) scale(1)";
+        }}
+      >
+        <img
+          src="/feitoporpita.png"
+          alt="Feito por Pita"
+          style={{ width: 140, height: "auto" }}
+        />
       </div>
     </main>
   );
