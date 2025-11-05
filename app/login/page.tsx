@@ -50,13 +50,13 @@ export default function LoginPage() {
           textAlign: "center",
         }}
       >
-        {/* LOGO MAIOR */}
+        {/* LOGO AUMENTADA */}
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
           <img
             src="/logo.svg"
             alt="Logo do AcertÔ"
             style={{
-              width: 180, // aumentada
+              width: 230, // aumentado conforme sua imagem
               height: "auto",
               filter: "drop-shadow(0 8px 18px rgba(0,0,0,0.45))",
             }}
@@ -67,7 +67,7 @@ export default function LoginPage() {
         <h1
           style={{
             margin: "0 0 8px",
-            fontSize: 30, // levemente reduzido
+            fontSize: 30,
             fontFamily:
               "'Arial Black', 'Impact', 'Segoe UI Black', system-ui, sans-serif",
             letterSpacing: 0.2,
@@ -78,7 +78,7 @@ export default function LoginPage() {
           Bem-vindo ao AcertÔ
         </h1>
 
-        {/* SLOGAN (MESMA FONTE) */}
+        {/* SLOGAN */}
         <p
           style={{
             margin: "0 0 30px",
