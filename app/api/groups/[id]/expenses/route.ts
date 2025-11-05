@@ -1,48 +1,57 @@
 import { NextResponse } from "next/server";
-import { supabaseServer } from "@/lib/supabaseClient";
+import { supabaseServer } from "@/lib/supabaseClient"; // seu helper já existe
 
-export async function GET(_req: Request, ctx: { params: { id: string } }) {
+type SplitMode = "equal_all" | "equal_selected";
+
+export async function GET(
+  _req: Request,
+  { params }: { params: { id: string } }
+) {
   const sb = supabaseServer();
   const { data, error } = await sb
     .from("expenses")
     .select("*")
-    .eq("group_id", ctx.params.id)
-    .order("date_iso", { ascending: false });
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json(data);
+    .eq("group_id", params.id)
+    .order("date_iso", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data ?? []);
 }
 
-export async function POST(req: Request, ctx: { params: { id: string } }) {
-  const payload = await req.json();
+export async function POST(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  const body = await req.json();
+
+  // validações mínimas
+  if (!body?.title || typeof body.title !== "string")
+    return NextResponse.json({ error: "Título obrigatório" }, { status: 400 });
+
+  const amount = Number(body.amount);
+  if (!Number.isFinite(amount) || amount <= 0)
+    return NextResponse.json({ error: "Valor inválido" }, { status: 400 });
+
+  const payload = {
+    group_id: params.id,
+    title: body.title.trim(),
+    amount,
+    buyer: String(body.buyer || ""),
+    payer: String(body.payer || ""),
+    split: (body.split as SplitMode) || "equal_all",
+    participants: Array.isArray(body.participants) ? body.participants : null,
+    category: body.category ?? null,
+    subcategory: body.subcategory ?? null,
+    pix_key: body.pix_key ?? null,
+    location: body.location ?? null,
+    date_iso: body.date_iso ? new Date(body.date_iso).toISOString() : new Date().toISOString(),
+    proof_url: body.proof_url ?? null,
+    paid: !!body.paid,
+  };
+
   const sb = supabaseServer();
-
-  const { data: e, error } = await sb.from("expenses").insert({
-    group_id: ctx.params.id,
-    title: payload.title,
-    amount: payload.amount,
-    buyer: payload.buyer,
-    payer: payload.payer,
-    split: payload.split,
-    participants: payload.participants ?? null,
-    category: payload.category,
-    subcategory: payload.subcategory,
-    pix_key: payload.pixKey ?? null,
-    location: payload.location ?? null,
-    date_iso: payload.dateISO,
-    proof_url: payload.proofUrl ?? null,
-    paid: !!payload.proofUrl
-  }).select("*").single();
-
-  if (error || !e) return NextResponse.json({ error: error?.message || "erro" }, { status: 400 });
-
-  const cat = e.category ? ` [${e.category}${e.subcategory ? `/${e.subcategory}` : ""}]` : "";
-  const loc = e.location ? ` no ${e.location}` : "";
-  const status = e.paid ? "(pago)" : "— pendente";
-  const splitLabel = e.split === "equal_selected" ? ` entre ${ (e.participants||[]).length } participante(s)` : " entre todos";
-  const msg = `${e.buyer} comprou "${e.title}"${cat}${loc} por R$ ${Number(e.amount).toFixed(2)} ${status} para ${e.payer}${splitLabel}.`;
-
-  await sb.from("group_logs").insert({ group_id: ctx.params.id, message: msg });
-  if (e.paid) await sb.from("group_logs").insert({ group_id: ctx.params.id, message: `Pagamento confirmado para "${e.title}".` });
-
-  return NextResponse.json(e);
+  const { data, error } = await sb.from("expenses").insert(payload).select().single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data);
 }
