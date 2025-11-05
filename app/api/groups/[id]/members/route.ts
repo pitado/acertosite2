@@ -1,13 +1,16 @@
+// app/api/groups/[id]/members/route.ts
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseClient";
 
-type Params = { params: { id: string } };
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
+type Params = { params: { id: string } };
 const emailRegex = /[^@]+@[^.]+\..+/;
 
 /**
  * GET /api/groups/:id/members
- * Retorna [{ email, created_at }]
+ * Retorna [{ email, created_at }] + (garante owner no front ao mesclar se quiser)
  */
 export async function GET(_req: Request, { params }: Params) {
   const sb = supabaseServer();
@@ -18,11 +21,8 @@ export async function GET(_req: Request, { params }: Params) {
     .eq("group_id", params.id)
     .order("created_at", { ascending: true });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json(data ?? []);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data ?? [], { status: 200 });
 }
 
 /**
@@ -32,7 +32,6 @@ export async function GET(_req: Request, { params }: Params) {
  */
 export async function POST(req: Request, { params }: Params) {
   const { email } = (await req.json()) as { email?: string };
-
   if (!email || !emailRegex.test(email)) {
     return NextResponse.json({ error: "E-mail inválido" }, { status: 400 });
   }
@@ -44,14 +43,11 @@ export async function POST(req: Request, { params }: Params) {
     .from("group_members")
     .upsert(
       { group_id: params.id, email: normalized },
-      { onConflict: "group_id,email" }
+      { onConflict: "group_id,email" } // requer índice único
     );
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ ok: true });
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true }, { status: 201 });
 }
 
 /**
@@ -60,22 +56,17 @@ export async function POST(req: Request, { params }: Params) {
  */
 export async function DELETE(req: Request, { params }: Params) {
   const { email } = (await req.json()) as { email?: string };
-
   if (!email || !emailRegex.test(email)) {
     return NextResponse.json({ error: "E-mail inválido" }, { status: 400 });
   }
 
   const sb = supabaseServer();
-
   const { error } = await sb
     .from("group_members")
     .delete()
     .eq("group_id", params.id)
     .eq("email", String(email).toLowerCase());
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ ok: true });
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true }, { status: 200 });
 }
