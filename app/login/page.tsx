@@ -42,55 +42,61 @@ export default function LoginPage() {
     >
       <div
         style={{
-          width: "min(480px, 92vw)", // caixa mais compacta
-          padding: "42px 36px 40px",
+          width: "min(460px, 90vw)", // menor e mais compacto
+          padding: "38px 34px 36px",
           background: "#143A31",
           borderRadius: 20,
           boxShadow: "0 25px 50px rgba(0,0,0,0.48)",
           textAlign: "center",
         }}
       >
-        {/* LOGO (com menor espaçamento abaixo) */}
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}>
+        {/* LOGO + TÍTULO MAIS PRÓXIMOS */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 8, // diminui o espaçamento entre logo e texto
+            marginBottom: 24,
+          }}
+        >
           <img
             src="/logo.svg"
             alt="Logo do AcertÔ"
             style={{
-              width: 230,
+              width: 220, // mantida grande
               height: "auto",
               filter: "drop-shadow(0 8px 18px rgba(0,0,0,0.45))",
             }}
           />
+
+          <h1
+            style={{
+              margin: 0,
+              fontSize: 28,
+              fontFamily:
+                "'Arial Black', 'Impact', 'Segoe UI Black', system-ui, sans-serif",
+              letterSpacing: 0.3,
+              color: "#E7FFF3",
+              textShadow: "0 2px 0 rgba(0,0,0,0.25)",
+            }}
+          >
+            Bem-vindo ao AcertÔ
+          </h1>
+
+          <p
+            style={{
+              margin: 0,
+              fontSize: 17,
+              fontFamily:
+                "'Arial Black', 'Impact', 'Segoe UI Black', system-ui, sans-serif",
+              color: "#A7F3CA",
+              letterSpacing: 0.3,
+            }}
+          >
+            A dívida vai, a amizade fica
+          </p>
         </div>
-
-        {/* TÍTULO */}
-        <h1
-          style={{
-            margin: "0 0 8px",
-            fontSize: 28,
-            fontFamily:
-              "'Arial Black', 'Impact', 'Segoe UI Black', system-ui, sans-serif",
-            letterSpacing: 0.2,
-            color: "#E7FFF3",
-            textShadow: "0 2px 0 rgba(0,0,0,0.25)",
-          }}
-        >
-          Bem-vindo ao AcertÔ
-        </h1>
-
-        {/* SLOGAN */}
-        <p
-          style={{
-            margin: "0 0 28px",
-            fontSize: 17,
-            fontFamily:
-              "'Arial Black', 'Impact', 'Segoe UI Black', system-ui, sans-serif",
-            color: "#A7F3CA",
-            letterSpacing: 0.3,
-          }}
-        >
-          A conta vai, mas a amizade fica
-        </p>
 
         {/* BOTÃO GOOGLE */}
         <button
