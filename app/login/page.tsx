@@ -1,7 +1,5 @@
 "use client";
-
 export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -10,7 +8,6 @@ import { supabaseClient } from "@/lib/supabaseClient";
 export default function LoginPage() {
   const router = useRouter();
 
-  // Se já existir sessão, manda direto pra /groups
   useEffect(() => {
     (async () => {
       const { data } = await supabaseClient.auth.getSession();
@@ -39,53 +36,69 @@ export default function LoginPage() {
         justifyContent: "center",
         background:
           "radial-gradient(circle at 30% 30%, #0f3b31 0%, #071f1a 70%)",
+        color: "#e6fff7",
       }}
     >
       <div
         style={{
           width: 440,
-          padding: 32,
+          padding: 40,
           background: "#143A31",
-          borderRadius: 18,
-          boxShadow: "0 20px 50px rgba(0,0,0,0.45)",
+          borderRadius: 20,
+          boxShadow: "0 25px 55px rgba(0,0,0,0.45)",
           textAlign: "center",
         }}
       >
-        {/* logo */}
-        <div style={{ marginBottom: 18, display: "flex", justifyContent: "center" }}>
-          <div
+        {/* LOGO CENTRALIZADA */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            marginBottom: 12,
+          }}
+        >
+          <img
+            src="/logo.svg" // sua nova logo transparente
+            alt="Logo AcertÔ"
             style={{
-              width: 74,
-              height: 74,
-              backgroundColor: "#1dd1a1",
-              borderRadius: "50%",
-              display: "grid",
-              placeItems: "center",
-              boxShadow: "0 8px 24px rgba(29, 209, 161, 0.35)",
+              width: 120, // aumenta o tamanho
+              height: "auto",
+              filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.4))", // brilho suave
             }}
-          >
-            <img src="/logo.svg" alt="AcertÔ" style={{ width: 44, height: 44 }} />
-          </div>
+          />
         </div>
 
+        {/* TÍTULO */}
         <h1
           style={{
-            fontSize: 24,
-            color: "#e6fff7",
-            marginBottom: 22,
+            fontSize: 26,
             fontWeight: 800,
-            letterSpacing: 0.5,
+            color: "#e6fff7",
+            marginBottom: 8,
           }}
         >
           Bem-vindo ao AcertÔ
         </h1>
 
-        {/* único botão de login */}
+        {/* SLOGAN */}
+        <p
+          style={{
+            fontSize: 15,
+            color: "#9de5c5",
+            marginBottom: 28,
+            fontStyle: "italic",
+            letterSpacing: 0.3,
+          }}
+        >
+          “A conta vai, a amizade fica”
+        </p>
+
+        {/* BOTÃO GOOGLE */}
         <button
           onClick={signInWithGoogle}
           style={{
             width: "100%",
-            padding: 14,
+            padding: 15,
             borderRadius: 12,
             border: "1px solid rgba(255,255,255,0.12)",
             background: "rgba(0,0,0,0.15)",
@@ -93,12 +106,26 @@ export default function LoginPage() {
             fontWeight: 700,
             fontSize: 16,
             cursor: "pointer",
+            transition: "all 0.2s ease",
           }}
+          onMouseOver={(e) =>
+            (e.currentTarget.style.background = "rgba(29,209,161,0.25)")
+          }
+          onMouseOut={(e) =>
+            (e.currentTarget.style.background = "rgba(0,0,0,0.15)")
+          }
         >
-          <span style={{ display: "inline-flex", gap: 10, alignItems: "center" }}>
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+            }}
+          >
             <img
               src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
-              alt=""
+              alt="Google"
               width={18}
               height={18}
             />
