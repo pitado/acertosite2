@@ -42,7 +42,7 @@ export default function LoginPage() {
     >
       <div
         style={{
-          width: "min(460px, 90vw)", // menor e mais compacto
+          width: "min(460px, 90vw)",
           padding: "38px 34px 36px",
           background: "#143A31",
           borderRadius: 20,
@@ -50,13 +50,12 @@ export default function LoginPage() {
           textAlign: "center",
         }}
       >
-        {/* LOGO + TÍTULO MAIS PRÓXIMOS */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: 8, // diminui o espaçamento entre logo e texto
+            gap: 8,
             marginBottom: 24,
           }}
         >
@@ -64,12 +63,13 @@ export default function LoginPage() {
             src="/logo.svg"
             alt="Logo do AcertÔ"
             style={{
-              width: 220, // mantida grande
+              width: 220,
               height: "auto",
               filter: "drop-shadow(0 8px 18px rgba(0,0,0,0.45))",
             }}
           />
 
+          {/* TÍTULO COM HOVER */}
           <h1
             style={{
               margin: 0,
@@ -77,21 +77,42 @@ export default function LoginPage() {
               fontFamily:
                 "'Arial Black', 'Impact', 'Segoe UI Black', system-ui, sans-serif",
               letterSpacing: 0.3,
-              color: "#E7FFF3",
+              color: "#ffffff",
               textShadow: "0 2px 0 rgba(0,0,0,0.25)",
+              transition: "color 0.3s ease, transform 0.3s ease",
+              cursor: "default",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "#1dd1a1";
+              e.currentTarget.style.transform = "scale(1.03)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "#ffffff";
+              e.currentTarget.style.transform = "scale(1)";
             }}
           >
             Bem-vindo ao AcertÔ
           </h1>
 
+          {/* SLOGAN COM HOVER */}
           <p
             style={{
               margin: 0,
               fontSize: 17,
               fontFamily:
                 "'Arial Black', 'Impact', 'Segoe UI Black', system-ui, sans-serif",
-              color: "#A7F3CA",
+              color: "#ffffff",
               letterSpacing: 0.3,
+              transition: "color 0.3s ease, transform 0.3s ease",
+              cursor: "default",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "#1dd1a1";
+              e.currentTarget.style.transform = "scale(1.03)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "#ffffff";
+              e.currentTarget.style.transform = "scale(1)";
             }}
           >
             A dívida vai, a amizade fica
