@@ -1,61 +1,46 @@
-"use client";
+import { NextResponse } from "next/server";
+import { supabaseServer } from "@/lib/supabaseClient";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
+export async function POST(
+  req: Request,
+  { params }: { params: { token: string } }
+) {
+  const { email } = await req.json();
+  if (!email) {
+    return NextResponse.json({ error: "E-mail obrigatório" }, { status: 400 });
+  }
 
-export default function InviteAcceptPage({ params }: { params: { token: string } }) {
-  const router = useRouter();
-  const [msg, setMsg] = useState("Validando convite...");
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
-  );
+  const sb = supabaseServer();
 
-  useEffect(() => {
-    (async () => {
-      // tenta pegar e-mail do Supabase Auth; se não, cai no localStorage como fallback
-      const { data: auth } = await supabase.auth.getUser();
-      const email =
-        auth?.user?.email ||
-        (typeof window !== "undefined" ? localStorage.getItem("acerto_email") : "");
+  // 1) localizar o convite
+  const { data: invite, error: invErr } = await sb
+    .from("group_invites")
+    .select("group_id, expires_at")
+    .eq("token", params.token)
+    .single();
 
-      if (!email) {
-        setMsg("Faça login para aceitar o convite...");
-        // guarda o retorno pós login
-        if (typeof window !== "undefined") {
-          sessionStorage.setItem("invite_back_to", `/invite/${params.token}`);
-        }
-        router.replace("/login");
-        return;
-      }
+  if (invErr || !invite) {
+    return NextResponse.json({ error: "Convite inválido" }, { status: 400 });
+  }
 
-      const res = await fetch(`/api/invites/${params.token}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
+  if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
+    return NextResponse.json({ error: "Convite expirado" }, { status: 400 });
+  }
 
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        setMsg(j?.error || "Convite inválido.");
-        return;
-      }
+  // 2) adicionar o membro usando UPSERT (evita erro de duplicado)
+  const normalizedEmail = String(email).toLowerCase();
 
-      setMsg("Convite aceito! Redirecionando...");
-      router.replace("/groups");
-    })();
-  }, [params.token, router, supabase]);
+  const { error: upErr } = await sb
+    .from("group_members")
+    .upsert(
+      { group_id: invite.group_id, email: normalizedEmail },
+      { onConflict: "group_id,email" } // precisa do índice único (já criamos)
+    );
 
-  return (
-    <main style={{
-      minHeight: "100vh", display: "grid", placeItems: "center",
-      background: "radial-gradient(circle at 30% 30%, #0f3b31 0%, #071f1a 70%)",
-      color: "#e6fff7"
-    }}>
-      <div style={{ padding: 24, background: "#12352d", borderRadius: 16 }}>
-        {msg}
-      </div>
-    </main>
-  );
+  if (upErr) {
+    // se não quiser tratar por código, apenas retorne o erro
+    return NextResponse.json({ error: upErr.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true, group_id: invite.group_id });
 }
