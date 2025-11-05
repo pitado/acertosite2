@@ -10,6 +10,7 @@ import { supabaseClient } from "@/lib/supabaseClient";
 export default function LoginPage() {
   const router = useRouter();
 
+  // Se já houver sessão ativa, redireciona
   useEffect(() => {
     (async () => {
       const { data } = await supabaseClient.auth.getSession();
@@ -21,6 +22,7 @@ export default function LoginPage() {
     })();
   }, [router]);
 
+  // Login com Google
   async function signInWithGoogle() {
     const redirectTo = `${window.location.origin}/auth/callback`;
     await supabaseClient.auth.signInWithOAuth({
@@ -38,81 +40,59 @@ export default function LoginPage() {
         justifyContent: "center",
         background:
           "radial-gradient(circle at 30% 30%, #0f3b31 0%, #071f1a 70%)",
-        color: "#e6fff7",
       }}
     >
       <div
         style={{
           width: 440,
-          padding: 36,
+          padding: 32,
           background: "#143A31",
-          borderRadius: 20,
-          boxShadow: "0 25px 55px rgba(0,0,0,0.45)",
+          borderRadius: 18,
+          boxShadow: "0 20px 50px rgba(0,0,0,0.45)",
           textAlign: "center",
         }}
       >
         {/* Logo */}
         <div
           style={{
-            marginBottom: 20,
+            marginBottom: 18,
             display: "flex",
             justifyContent: "center",
           }}
         >
           <div
             style={{
-              width: 78,
-              height: 78,
+              width: 74,
+              height: 74,
               backgroundColor: "#1dd1a1",
               borderRadius: "50%",
               display: "grid",
               placeItems: "center",
-              boxShadow: "0 8px 25px rgba(29, 209, 161, 0.35)",
+              boxShadow: "0 8px 24px rgba(29, 209, 161, 0.35)",
             }}
           >
-            <img
-              src="/logo.svg"
-              alt="AcertÔ"
-              style={{
-                width: 46,
-                height: 46,
-                filter: "drop-shadow(0 2px 3px rgba(0,0,0,.25))",
-              }}
-            />
+            <img src="/logo.svg" alt="AcertÔ" style={{ width: 44, height: 44 }} />
           </div>
         </div>
 
-        {/* Título */}
         <h1
           style={{
             fontSize: 24,
             color: "#e6fff7",
-            marginBottom: 8,
+            marginBottom: 22,
             fontWeight: 800,
-            letterSpacing: 0.6,
+            letterSpacing: 0.5,
           }}
         >
           Bem-vindo ao AcertÔ
         </h1>
 
-        {/* Slogan */}
-        <p
-          style={{
-            fontSize: 14,
-            color: "#9de5c5",
-            marginBottom: 28,
-            letterSpacing: 0.3,
-          }}
-        >
-          “A dívida vai, a amizade fica 💚”
-        </p>
-
-        {/* Botão Google */}
+        {/* Único botão de login */}
         <button
           onClick={signInWithGoogle}
           style={{
             width: "100%",
-            padding: 15,
+            padding: 14,
             borderRadius: 12,
             border: "1px solid rgba(255,255,255,0.12)",
             background: "rgba(0,0,0,0.15)",
@@ -120,14 +100,7 @@ export default function LoginPage() {
             fontWeight: 700,
             fontSize: 16,
             cursor: "pointer",
-            transition: "all 0.2s ease",
           }}
-          onMouseOver={(e) =>
-            (e.currentTarget.style.background = "rgba(29,209,161,0.2)")
-          }
-          onMouseOut={(e) =>
-            (e.currentTarget.style.background = "rgba(0,0,0,0.15)")
-          }
         >
           <span
             style={{
