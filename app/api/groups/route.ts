@@ -1,124 +1,52 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { NextResponse } from "next/server";
+import { supabaseServer } from "@/lib/supabaseClient";
 
-// Preferi criar o client aqui para evitar conflitos, mas
-// se você já tem em `lib/supabaseClient.ts`, pode importar de lá.
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const ownerEmail = url.searchParams.get("ownerEmail") || "";
+  const search = (url.searchParams.get("q") || "").toLowerCase();
 
-// GET  /api/groups?ownerEmail=...   (lista)
-// GET  /api/groups?id=...          (um item)
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const ownerEmail = searchParams.get("ownerEmail");
-    const id = searchParams.get("id");
+  const sb = supabaseServer();
+  const { data, error } = await sb
+    .from("groups")
+    .select("id,name,description,owner_email:owner_email,role_date,created_at,updated_at")
+    .eq("owner_email", ownerEmail)
+    .order("name");
 
-    if (id) {
-      const { data, error } = await supabase
-        .from("groups")
-        .select("*")
-        .eq("id", id)
-        .limit(1)
-        .maybeSingle();
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-      if (error) throw error;
-      return NextResponse.json(data ?? null);
-    }
+  const filtered = search
+    ? (data || []).filter(g => g.name.toLowerCase().includes(search))
+    : (data || []);
 
-    if (!ownerEmail) {
-      return NextResponse.json(
-        { error: "ownerEmail é obrigatório" },
-        { status: 400 }
-      );
-    }
-
-    const { data, error } = await supabase
-      .from("groups")
-      .select("*")
-      .eq("owner_email", ownerEmail)
-      .order("created_at", { ascending: false });
-
-    if (error) throw error;
-    return NextResponse.json(data ?? []);
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || "GET error" }, { status: 500 });
-  }
+  return NextResponse.json(filtered);
 }
 
-// POST  /api/groups  body: { name, ownerEmail, description?, members?, startAt? }
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { name, ownerEmail, description, members, startAt } = body || {};
-    if (!name || !ownerEmail) {
-      return NextResponse.json(
-        { error: "Campos obrigatórios: name, ownerEmail" },
-        { status: 400 }
-      );
-    }
+export async function POST(req: Request) {
+  const body = await req.json();
+  const { ownerEmail, name, description, roleDateISO, emails } = body as {
+    ownerEmail: string; name: string; description?: string; roleDateISO?: string; emails: string[];
+  };
 
-    const insertRow = {
-      name,
+  const sb = supabaseServer();
+  const { data: g, error } = await sb
+    .from("groups")
+    .insert({
       owner_email: ownerEmail,
-      description: description ?? null,
-      members: members ?? null,
-      start_at: startAt ? new Date(startAt).toISOString() : null,
-    };
+      name,
+      description,
+      role_date: roleDateISO ? new Date(roleDateISO).toISOString() : null,
+    })
+    .select("id")
+    .single();
 
-    const { data, error } = await supabase
-      .from("groups")
-      .insert(insertRow)
-      .select()
-      .maybeSingle();
+  if (error || !g) return NextResponse.json({ error: error?.message || "erro" }, { status: 400 });
 
-    if (error) throw error;
-    return NextResponse.json(data);
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || "POST error" }, { status: 500 });
+  if (Array.isArray(emails) && emails.length) {
+    const rows = emails.map((e: string) => ({ group_id: g.id, email: e.toLowerCase() }));
+    await sb.from("group_members").insert(rows);
   }
-}
 
-// PUT  /api/groups  body: { id, name?, description?, members?, startAt? }
-export async function PUT(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { id, name, description, members, startAt } = body || {};
-    if (!id) return NextResponse.json({ error: "id obrigatório" }, { status: 400 });
-
-    const patch: any = {};
-    if (typeof name === "string") patch.name = name;
-    patch.description = description ?? null;
-    patch.members = members ?? null;
-    patch.start_at = startAt ? new Date(startAt).toISOString() : null;
-
-    const { data, error } = await supabase
-      .from("groups")
-      .update(patch)
-      .eq("id", id)
-      .select()
-      .maybeSingle();
-
-    if (error) throw error;
-    return NextResponse.json(data);
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || "PUT error" }, { status: 500 });
-  }
-}
-
-// DELETE  /api/groups?id=...
-export async function DELETE(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
-    if (!id) return NextResponse.json({ error: "id obrigatório" }, { status: 400 });
-
-    const { error } = await supabase.from("groups").delete().eq("id", id);
-    if (error) throw error;
-    return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || "DELETE error" }, { status: 500 });
-  }
+  await sb.from("group_logs").insert({ group_id: g.id, message: `Grupo criado: ${name}.` });
+  return NextResponse.json({ id: g.id });
 }
