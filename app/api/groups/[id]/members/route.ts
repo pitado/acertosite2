@@ -1,32 +1,81 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseClient";
 
-export async function GET(
-  _req: Request,
-  { params }: { params: { id: string } }
-) {
+type Params = { params: { id: string } };
+
+const emailRegex = /[^@]+@[^.]+\..+/;
+
+/**
+ * GET /api/groups/:id/members
+ * Retorna [{ email, created_at }]
+ */
+export async function GET(_req: Request, { params }: Params) {
   const sb = supabaseServer();
 
-  // pega membros na group_members
-  const { data: members, error: mErr } = await sb
+  const { data, error } = await sb
     .from("group_members")
-    .select("email")
-    .eq("group_id", params.id);
+    .select("email, created_at")
+    .eq("group_id", params.id)
+    .order("created_at", { ascending: true });
 
-  if (mErr) return NextResponse.json({ error: mErr.message }, { status: 500 });
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
-  // garante que o owner também entra na lista
-  const { data: g, error: gErr } = await sb
-    .from("groups")
-    .select("owner_email")
-    .eq("id", params.id)
-    .single();
+  return NextResponse.json(data ?? []);
+}
 
-  if (gErr) return NextResponse.json({ error: gErr.message }, { status: 500 });
+/**
+ * POST /api/groups/:id/members
+ * Body: { email: string }
+ * Usa UPSERT para evitar erro de duplicado.
+ */
+export async function POST(req: Request, { params }: Params) {
+  const { email } = (await req.json()) as { email?: string };
 
-  const emails = new Set<string>();
-  if (g?.owner_email) emails.add(String(g.owner_email).toLowerCase());
-  for (const row of members || []) emails.add(String(row.email).toLowerCase());
+  if (!email || !emailRegex.test(email)) {
+    return NextResponse.json({ error: "E-mail inválido" }, { status: 400 });
+  }
 
-  return NextResponse.json(Array.from(emails));
+  const sb = supabaseServer();
+  const normalized = String(email).toLowerCase();
+
+  const { error } = await sb
+    .from("group_members")
+    .upsert(
+      { group_id: params.id, email: normalized },
+      { onConflict: "group_id,email" }
+    );
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
+}
+
+/**
+ * DELETE /api/groups/:id/members
+ * Body: { email: string }
+ */
+export async function DELETE(req: Request, { params }: Params) {
+  const { email } = (await req.json()) as { email?: string };
+
+  if (!email || !emailRegex.test(email)) {
+    return NextResponse.json({ error: "E-mail inválido" }, { status: 400 });
+  }
+
+  const sb = supabaseServer();
+
+  const { error } = await sb
+    .from("group_members")
+    .delete()
+    .eq("group_id", params.id)
+    .eq("email", String(email).toLowerCase());
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
 }
