@@ -10,7 +10,7 @@ import { supabaseClient } from "@/lib/supabaseClient";
 export default function LoginPage() {
   const router = useRouter();
 
-  // Se já houver sessão ativa, redireciona
+  // Se já existir sessão, manda direto pra /groups
   useEffect(() => {
     (async () => {
       const { data } = await supabaseClient.auth.getSession();
@@ -22,7 +22,6 @@ export default function LoginPage() {
     })();
   }, [router]);
 
-  // Login com Google
   async function signInWithGoogle() {
     const redirectTo = `${window.location.origin}/auth/callback`;
     await supabaseClient.auth.signInWithOAuth({
@@ -52,14 +51,8 @@ export default function LoginPage() {
           textAlign: "center",
         }}
       >
-        {/* Logo */}
-        <div
-          style={{
-            marginBottom: 18,
-            display: "flex",
-            justifyContent: "center",
-          }}
-        >
+        {/* logo */}
+        <div style={{ marginBottom: 18, display: "flex", justifyContent: "center" }}>
           <div
             style={{
               width: 74,
@@ -87,7 +80,7 @@ export default function LoginPage() {
           Bem-vindo ao AcertÔ
         </h1>
 
-        {/* Único botão de login */}
+        {/* único botão de login */}
         <button
           onClick={signInWithGoogle}
           style={{
@@ -102,17 +95,10 @@ export default function LoginPage() {
             cursor: "pointer",
           }}
         >
-          <span
-            style={{
-              display: "inline-flex",
-              gap: 10,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
+          <span style={{ display: "inline-flex", gap: 10, alignItems: "center" }}>
             <img
               src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
-              alt="Google"
+              alt=""
               width={18}
               height={18}
             />
