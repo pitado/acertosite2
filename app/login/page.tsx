@@ -1,14 +1,16 @@
 "use client";
 export const dynamic = "force-dynamic";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseClient } from "@/lib/supabaseClient";
 
 export default function LoginPage() {
   const router = useRouter();
+  const [hoverSlogan, setHoverSlogan] = useState(false);
 
   useEffect(() => {
+    // Se já estiver autenticado, pula pro /groups
     (async () => {
       const { data } = await supabaseClient.auth.getSession();
       const email = data.session?.user?.email;
@@ -37,60 +39,64 @@ export default function LoginPage() {
         background:
           "radial-gradient(circle at 30% 30%, #0f3b31 0%, #071f1a 70%)",
         color: "#e6fff7",
+        padding: 16,
       }}
     >
       <div
         style={{
-          width: 440,
-          padding: 40,
+          width: "min(560px, 92vw)",
+          padding: "44px 40px 38px",
           background: "#143A31",
           borderRadius: 20,
-          boxShadow: "0 25px 55px rgba(0,0,0,0.45)",
+          boxShadow: "0 28px 60px rgba(0,0,0,0.48)",
           textAlign: "center",
         }}
       >
-        {/* LOGO CENTRALIZADA */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            marginBottom: 12,
-          }}
-        >
+        {/* LOGO */}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
           <img
-            src="/logo.svg" // sua nova logo transparente
-            alt="Logo AcertÔ"
+            src="/logo.svg" // SVG transparente
+            alt="Logo do AcertÔ"
             style={{
-              width: 120, // aumenta o tamanho
+              width: 140,             // << maior
               height: "auto",
-              filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.4))", // brilho suave
+              filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.45))",
             }}
           />
         </div>
 
-        {/* TÍTULO */}
+        {/* TÍTULO com “peso” de Arial Black */}
         <h1
           style={{
-            fontSize: 26,
-            fontWeight: 800,
-            color: "#e6fff7",
-            marginBottom: 8,
+            margin: "0 0 10px",
+            fontSize: 34,
+            lineHeight: 1.15,
+            // stack com fontes “sólidas”
+            fontFamily:
+              "'Arial Black', 'Arial Black Regular', 'Impact', 'Segoe UI Black', system-ui, -apple-system, Arial, sans-serif",
+            letterSpacing: 0.2,
+            color: "#E7FFF3",
+            textShadow: "0 2px 0 rgba(0,0,0,0.25)",
           }}
         >
           Bem-vindo ao AcertÔ
         </h1>
 
-        {/* SLOGAN */}
+        {/* SLOGAN com micro-hover */}
         <p
+          onMouseEnter={() => setHoverSlogan(true)}
+          onMouseLeave={() => setHoverSlogan(false)}
           style={{
-            fontSize: 15,
-            color: "#9de5c5",
-            marginBottom: 28,
+            margin: "0 0 28px",
+            fontSize: 16,
+            color: hoverSlogan ? "#b7f5da" : "#9de5c5",
+            letterSpacing: hoverSlogan ? 0.6 : 0.2,
+            transition: "all .25s ease",
+            textShadow: hoverSlogan ? "0 0 8px rgba(29,209,161,0.45)" : "none",
             fontStyle: "italic",
-            letterSpacing: 0.3,
           }}
         >
-          “A conta vai, a amizade fica”
+          A conta vai, a amizade fica
         </p>
 
         {/* BOTÃO GOOGLE */}
@@ -98,22 +104,25 @@ export default function LoginPage() {
           onClick={signInWithGoogle}
           style={{
             width: "100%",
-            padding: 15,
-            borderRadius: 12,
+            padding: 16,
+            borderRadius: 14,
             border: "1px solid rgba(255,255,255,0.12)",
             background: "rgba(0,0,0,0.15)",
             color: "#e6fff7",
-            fontWeight: 700,
+            fontWeight: 800,
             fontSize: 16,
             cursor: "pointer",
-            transition: "all 0.2s ease",
+            transition: "all 0.18s ease",
+            boxShadow: "inset 0 0 0 rgba(0,0,0,0)",
           }}
-          onMouseOver={(e) =>
-            (e.currentTarget.style.background = "rgba(29,209,161,0.25)")
-          }
-          onMouseOut={(e) =>
-            (e.currentTarget.style.background = "rgba(0,0,0,0.15)")
-          }
+          onMouseOver={(e) => {
+            e.currentTarget.style.background = "rgba(29,209,161,0.22)";
+            e.currentTarget.style.boxShadow = "inset 0 -2px 0 rgba(0,0,0,0.15)";
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.background = "rgba(0,0,0,0.15)";
+            e.currentTarget.style.boxShadow = "inset 0 0 0 rgba(0,0,0,0)";
+          }}
         >
           <span
             style={{
@@ -125,9 +134,10 @@ export default function LoginPage() {
           >
             <img
               src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
-              alt="Google"
+              alt=""
               width={18}
               height={18}
+              style={{ transform: "translateY(-1px)" }}
             />
             Continuar com Google
           </span>
