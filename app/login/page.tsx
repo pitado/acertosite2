@@ -42,21 +42,21 @@ export default function LoginPage() {
     >
       <div
         style={{
-          width: "min(560px, 92vw)",
-          padding: "48px 40px 44px",
+          width: "min(480px, 92vw)", // caixa mais compacta
+          padding: "42px 36px 40px",
           background: "#143A31",
           borderRadius: 20,
-          boxShadow: "0 28px 60px rgba(0,0,0,0.48)",
+          boxShadow: "0 25px 50px rgba(0,0,0,0.48)",
           textAlign: "center",
         }}
       >
-        {/* LOGO AUMENTADA */}
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
+        {/* LOGO (com menor espaçamento abaixo) */}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}>
           <img
             src="/logo.svg"
             alt="Logo do AcertÔ"
             style={{
-              width: 230, // aumentado conforme sua imagem
+              width: 230,
               height: "auto",
               filter: "drop-shadow(0 8px 18px rgba(0,0,0,0.45))",
             }}
@@ -67,7 +67,7 @@ export default function LoginPage() {
         <h1
           style={{
             margin: "0 0 8px",
-            fontSize: 30,
+            fontSize: 28,
             fontFamily:
               "'Arial Black', 'Impact', 'Segoe UI Black', system-ui, sans-serif",
             letterSpacing: 0.2,
@@ -81,16 +81,15 @@ export default function LoginPage() {
         {/* SLOGAN */}
         <p
           style={{
-            margin: "0 0 30px",
-            fontSize: 18,
+            margin: "0 0 28px",
+            fontSize: 17,
             fontFamily:
               "'Arial Black', 'Impact', 'Segoe UI Black', system-ui, sans-serif",
             color: "#A7F3CA",
             letterSpacing: 0.3,
-            transition: "all .25s ease",
           }}
         >
-          A conta vai, a amizade fica
+          A conta vai, mas a amizade fica
         </p>
 
         {/* BOTÃO GOOGLE */}
@@ -98,8 +97,8 @@ export default function LoginPage() {
           onClick={signInWithGoogle}
           style={{
             width: "100%",
-            padding: 16,
-            borderRadius: 14,
+            padding: 15,
+            borderRadius: 12,
             border: "1px solid rgba(255,255,255,0.12)",
             background: "rgba(0,0,0,0.15)",
             color: "#e6fff7",
