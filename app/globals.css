@@ -1,4 +1,18 @@
-* { box-sizing: border-box; }
-html, body, #__next { height: 100%; }
-body { margin: 0; background: #0f2a24; color: #fff; }
-button { cursor: pointer; }
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* fundo */
+html, body { height: 100%; }
+body {
+  color: #fff;
+  background:
+    radial-gradient(1200px 600px at 20% 10%, rgba(6,78,59,.35), transparent 60%),
+    radial-gradient(900px 500px at 80% 20%, rgba(16,185,129,.10), transparent 60%),
+    #071f1a;
+}
+
+/* helpers opcionais */
+.card-glass { @apply bg-emerald-900/50 border border-emerald-800/60 backdrop-blur; }
+.btn-primary { @apply px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-emerald-950 inline-flex items-center gap-2; }
+.input { @apply w-full rounded-md bg-emerald-950/40 border border-emerald-800/70 p-2 outline-none; }
