@@ -1,16 +1,14 @@
 "use client";
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseClient } from "@/lib/supabaseClient";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [hoverSlogan, setHoverSlogan] = useState(false);
 
   useEffect(() => {
-    // Se já estiver autenticado, pula pro /groups
     (async () => {
       const { data } = await supabaseClient.auth.getSession();
       const email = data.session?.user?.email;
@@ -45,35 +43,33 @@ export default function LoginPage() {
       <div
         style={{
           width: "min(560px, 92vw)",
-          padding: "44px 40px 38px",
+          padding: "48px 40px 44px",
           background: "#143A31",
           borderRadius: 20,
           boxShadow: "0 28px 60px rgba(0,0,0,0.48)",
           textAlign: "center",
         }}
       >
-        {/* LOGO */}
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
+        {/* LOGO MAIOR */}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
           <img
-            src="/logo.svg" // SVG transparente
+            src="/logo.svg"
             alt="Logo do AcertÔ"
             style={{
-              width: 140,             // << maior
+              width: 180, // aumentada
               height: "auto",
-              filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.45))",
+              filter: "drop-shadow(0 8px 18px rgba(0,0,0,0.45))",
             }}
           />
         </div>
 
-        {/* TÍTULO com “peso” de Arial Black */}
+        {/* TÍTULO */}
         <h1
           style={{
-            margin: "0 0 10px",
-            fontSize: 34,
-            lineHeight: 1.15,
-            // stack com fontes “sólidas”
+            margin: "0 0 8px",
+            fontSize: 30, // levemente reduzido
             fontFamily:
-              "'Arial Black', 'Arial Black Regular', 'Impact', 'Segoe UI Black', system-ui, -apple-system, Arial, sans-serif",
+              "'Arial Black', 'Impact', 'Segoe UI Black', system-ui, sans-serif",
             letterSpacing: 0.2,
             color: "#E7FFF3",
             textShadow: "0 2px 0 rgba(0,0,0,0.25)",
@@ -82,18 +78,16 @@ export default function LoginPage() {
           Bem-vindo ao AcertÔ
         </h1>
 
-        {/* SLOGAN com micro-hover */}
+        {/* SLOGAN (MESMA FONTE) */}
         <p
-          onMouseEnter={() => setHoverSlogan(true)}
-          onMouseLeave={() => setHoverSlogan(false)}
           style={{
-            margin: "0 0 28px",
-            fontSize: 16,
-            color: hoverSlogan ? "#b7f5da" : "#9de5c5",
-            letterSpacing: hoverSlogan ? 0.6 : 0.2,
+            margin: "0 0 30px",
+            fontSize: 18,
+            fontFamily:
+              "'Arial Black', 'Impact', 'Segoe UI Black', system-ui, sans-serif",
+            color: "#A7F3CA",
+            letterSpacing: 0.3,
             transition: "all .25s ease",
-            textShadow: hoverSlogan ? "0 0 8px rgba(29,209,161,0.45)" : "none",
-            fontStyle: "italic",
           }}
         >
           A conta vai, a amizade fica
@@ -113,16 +107,13 @@ export default function LoginPage() {
             fontSize: 16,
             cursor: "pointer",
             transition: "all 0.18s ease",
-            boxShadow: "inset 0 0 0 rgba(0,0,0,0)",
           }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.background = "rgba(29,209,161,0.22)";
-            e.currentTarget.style.boxShadow = "inset 0 -2px 0 rgba(0,0,0,0.15)";
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.background = "rgba(0,0,0,0.15)";
-            e.currentTarget.style.boxShadow = "inset 0 0 0 rgba(0,0,0,0)";
-          }}
+          onMouseOver={(e) =>
+            (e.currentTarget.style.background = "rgba(29,209,161,0.22)")
+          }
+          onMouseOut={(e) =>
+            (e.currentTarget.style.background = "rgba(0,0,0,0.15)")
+          }
         >
           <span
             style={{
