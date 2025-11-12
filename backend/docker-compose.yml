@@ -1,4 +1,5 @@
 version: "3.8"
+
 services:
   mysql:
     image: mysql:8
@@ -6,23 +7,31 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: Cesarpita21@
       MYSQL_DATABASE: acerto_db
+      MYSQL_USER: acerto            # 👈 adiciona um usuário normal
+      MYSQL_PASSWORD: acerto123     # 👈 senha simples pro app
     ports:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+    healthcheck:                    # 👈 garante que o banco esteja pronto antes do backend
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-pCesarpita21@"]
+      interval: 5s
+      retries: 10
 
   backend:
     build: .
+    restart: always
     ports:
       - "8080:8080"
     environment:
-      - DB_HOST=mysql
-      - DB_USER=root
-      - DB_PASS=Cesarpita21@
-      - DB_NAME=acerto_db
-      - DB_PORT=3306
+      DB_HOST: mysql
+      DB_USER: acerto               # 👈 usa o user do app, não o root
+      DB_PASS: acerto123
+      DB_NAME: acerto_db
+      DB_PORT: 3306
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy  # 👈 espera o banco estar pronto antes de subir
 
 volumes:
   mysql_data:
