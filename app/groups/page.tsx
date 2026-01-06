@@ -136,9 +136,9 @@ export default function GroupsPage() {
       <header className="max-w-6xl mx-auto flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
           <img
-            src="/logo.svg"
+            src="/pig.svg"
             alt="AcertÔ"
-            className="h-10 w-10 md:h-12 md:w-12 drop-shadow-[0_2px_6px_rgba(0,0,0,.35)]"
+            className="h-10 w-10 md:h-12 md:w-12 text-emerald-300 drop-shadow-[0_2px_6px_rgba(0,0,0,.35)]"
           />
           <span className="sr-only">AcertÔ</span>
         </div>
