@@ -2,6 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
+const { randomUUID } = require("crypto");
 
 // GET /groups?ownerEmail=...
 router.get("/", async (req, res) => {
@@ -158,6 +159,49 @@ router.delete("/:id", async (req, res) => {
   } catch (err) {
     console.error("Erro ao excluir grupo:", err);
     res.status(500).json({ error: "Erro ao excluir grupo" });
+  }
+});
+
+// GET /groups/:id/invites
+router.get("/:id/invites", async (req, res) => {
+  const groupId = req.params.id;
+
+  try {
+    const [rows] = await db.execute(
+      `
+      SELECT token, created_at, expires_at
+      FROM invites
+      WHERE group_id = ?
+      ORDER BY created_at DESC
+      `,
+      [groupId]
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro ao listar convites:", err);
+    res.status(500).json({ error: "Erro ao listar convites" });
+  }
+});
+
+// POST /groups/:id/invites
+router.post("/:id/invites", async (req, res) => {
+  const groupId = req.params.id;
+  const token = randomUUID();
+
+  try {
+    await db.execute(
+      `
+      INSERT INTO invites (group_id, token, created_at)
+      VALUES (?, ?, ?)
+      `,
+      [groupId, token, new Date()]
+    );
+
+    res.status(201).json({ token });
+  } catch (err) {
+    console.error("Erro ao criar convite:", err);
+    res.status(500).json({ error: "Erro ao criar convite" });
   }
 });
 
