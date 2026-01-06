@@ -157,14 +157,7 @@ export default function GroupsPage() {
   return (
     <div className="min-h-screen bg-[#0f2a24] text-white p-4 md:p-8">
       <header className="max-w-6xl mx-auto flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-3">
-          <img
-            src="/logo.svg"
-            alt="AcertÔ"
-            className="h-12 w-12 md:h-14 md:w-14 drop-shadow-[0_2px_6px_rgba(0,0,0,.35)]"
-          />
-          <span className="sr-only">AcertÔ</span>
-        </div>
+        <div className="flex-1" />
 
         <div className="flex flex-wrap items-center gap-3">
           {ownerEmail && (
@@ -206,6 +199,23 @@ export default function GroupsPage() {
             placeholder="Buscar grupos…"
             className="bg-transparent outline-none w-full text-emerald-50 placeholder:text-emerald-200/60"
           />
+        </div>
+      </section>
+
+      <section className="max-w-6xl mx-auto mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl border border-emerald-800/60 bg-emerald-900/40 p-4">
+          <div className="text-xs text-emerald-100/70">Grupos totais</div>
+          <div className="text-2xl font-semibold text-emerald-50">{items.length}</div>
+        </div>
+        <div className="rounded-2xl border border-emerald-800/60 bg-emerald-900/40 p-4">
+          <div className="text-xs text-emerald-100/70">Resultados da busca</div>
+          <div className="text-2xl font-semibold text-emerald-50">{filtered.length}</div>
+        </div>
+        <div className="rounded-2xl border border-emerald-800/60 bg-emerald-900/40 p-4">
+          <div className="text-xs text-emerald-100/70">Despesas do grupo</div>
+          <div className="text-2xl font-semibold text-emerald-50">
+            {selectedExpenses ? selectedExpenses.length : 0}
+          </div>
         </div>
       </section>
 
