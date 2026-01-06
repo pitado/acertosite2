@@ -135,16 +135,12 @@ export default function GroupsPage() {
     <div className="min-h-screen bg-[#0f2a24] text-white p-4 md:p-8">
       <header className="max-w-6xl mx-auto flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight flex items-center gap-3">
-            <span className="text-emerald-300">AcertÔ</span>
-            {/* porquinho no lugar do “— Grupos” */}
-            <img
-              src="/pig.svg" /* altere para /logo.svg se for o nome do seu arquivo */
-              alt="AcertÔ"
-              className="h-8 w-8 md:h-10 md:w-10 drop-shadow-[0_2px_6px_rgba(0,0,0,.35)]"
-            />
-          </h1>
-          <span className="sr-only">Grupos</span>
+          <img
+            src="/logo.svg"
+            alt="AcertÔ"
+            className="h-10 w-10 md:h-12 md:w-12 drop-shadow-[0_2px_6px_rgba(0,0,0,.35)]"
+          />
+          <span className="sr-only">AcertÔ</span>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
