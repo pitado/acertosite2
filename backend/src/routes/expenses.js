@@ -90,6 +90,14 @@ router.post("/:groupId", async (req, res) => {
     );
 
     const insertedId = result.insertId;
+    try {
+      await db.execute(
+        `INSERT INTO group_logs (group_id, message, created_at) VALUES (?, ?, ?)`,
+        [groupId, `Despesa criada: ${payload.title}.`, new Date()]
+      );
+    } catch (logErr) {
+      console.warn("Aviso: não foi possível registrar log da despesa:", logErr);
+    }
     res.status(201).json({ id: insertedId, ...payload });
   } catch (err) {
     console.error("Erro ao criar despesa:", err);
@@ -124,6 +132,21 @@ router.patch("/:expenseId", async (req, res) => {
       `UPDATE expenses SET ${fields.join(", ")} WHERE id = ?`,
       params
     );
+    try {
+      await db.execute(
+        `INSERT INTO group_logs (group_id, message, created_at)
+         SELECT group_id, ?, ? FROM expenses WHERE id = ?`,
+        [
+          paid !== undefined
+            ? `Despesa marcada como ${paid ? "paga" : "pendente"}`
+            : "Despesa atualizada",
+          new Date(),
+          id,
+        ]
+      );
+    } catch (logErr) {
+      console.warn("Aviso: não foi possível registrar log da despesa:", logErr);
+    }
     res.json({ ok: true });
   } catch (err) {
     console.error("Erro ao atualizar despesa:", err);
@@ -135,6 +158,16 @@ router.patch("/:expenseId", async (req, res) => {
 router.delete("/:expenseId", async (req, res) => {
   const id = req.params.expenseId;
   try {
+    try {
+      await db.execute(
+        `INSERT INTO group_logs (group_id, message, created_at)
+         SELECT group_id, CONCAT('Despesa removida: ', title, '.'), ?
+         FROM expenses WHERE id = ?`,
+        [new Date(), id]
+      );
+    } catch (logErr) {
+      console.warn("Aviso: não foi possível registrar log da despesa:", logErr);
+    }
     await db.execute(`DELETE FROM expenses WHERE id = ?`, [id]);
     res.json({ ok: true });
   } catch (err) {

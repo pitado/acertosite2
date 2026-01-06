@@ -16,6 +16,17 @@ export type Invite = {
   expires_at?: string | null;
 };
 
+export type Member = {
+  email: string;
+  created_at?: string | null;
+};
+
+export type LogEntry = {
+  id: string;
+  message: string;
+  created_at: string;
+};
+
 export type Expense = {
   id: string;
   group_id: string;

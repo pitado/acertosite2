@@ -5,6 +5,7 @@ const cors = require("cors");
 
 const groupsRouter = require("./routes/groups");
 const expensesRouter = require("./routes/expenses");
+const invitesRouter = require("./routes/invites");
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.get("/", (req, res) => {
 // Rotas principais
 app.use("/groups", groupsRouter);
 app.use("/expenses", expensesRouter);
+app.use("/invites", invitesRouter);
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {

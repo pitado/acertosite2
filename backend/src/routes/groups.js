@@ -138,6 +138,15 @@ router.patch("/:id", async (req, res) => {
       }
     }
 
+    try {
+      await db.execute(
+        `INSERT INTO group_logs (group_id, message, created_at) VALUES (?, ?, ?)`,
+        [groupId, "Grupo atualizado.", new Date()]
+      );
+    } catch (logErr) {
+      console.warn("Aviso: não foi possível registrar log do grupo:", logErr);
+    }
+
     res.json({ ok: true });
   } catch (err) {
     console.error("Erro ao atualizar grupo:", err);
@@ -159,6 +168,114 @@ router.delete("/:id", async (req, res) => {
   } catch (err) {
     console.error("Erro ao excluir grupo:", err);
     res.status(500).json({ error: "Erro ao excluir grupo" });
+  }
+});
+
+// GET /groups/:id/members
+router.get("/:id/members", async (req, res) => {
+  const groupId = req.params.id;
+  try {
+    const [rows] = await db.execute(
+      `
+      SELECT email, created_at
+      FROM group_members
+      WHERE group_id = ?
+      ORDER BY created_at ASC
+      `,
+      [groupId]
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro ao listar membros:", err);
+    res.status(500).json({ error: "Erro ao listar membros" });
+  }
+});
+
+// POST /groups/:id/members
+router.post("/:id/members", async (req, res) => {
+  const groupId = req.params.id;
+  const { email } = req.body || {};
+  const normalized = String(email || "").trim().toLowerCase();
+
+  if (!normalized || !normalized.includes("@")) {
+    return res.status(400).json({ error: "E-mail inválido" });
+  }
+
+  try {
+    await db.execute(
+      `INSERT INTO group_members (group_id, email, created_at) VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE email = email`,
+      [groupId, normalized, new Date()]
+    );
+
+    try {
+      await db.execute(
+        `INSERT INTO group_logs (group_id, message, created_at) VALUES (?, ?, ?)`,
+        [groupId, `Membro adicionado: ${normalized}.`, new Date()]
+      );
+    } catch (logErr) {
+      console.warn("Aviso: não foi possível registrar log do membro:", logErr);
+    }
+
+    res.status(201).json({ ok: true });
+  } catch (err) {
+    console.error("Erro ao adicionar membro:", err);
+    res.status(500).json({ error: "Erro ao adicionar membro" });
+  }
+});
+
+// DELETE /groups/:id/members
+router.delete("/:id/members", async (req, res) => {
+  const groupId = req.params.id;
+  const { email } = req.body || {};
+  const normalized = String(email || "").trim().toLowerCase();
+
+  if (!normalized || !normalized.includes("@")) {
+    return res.status(400).json({ error: "E-mail inválido" });
+  }
+
+  try {
+    await db.execute(
+      `DELETE FROM group_members WHERE group_id = ? AND email = ?`,
+      [groupId, normalized]
+    );
+
+    try {
+      await db.execute(
+        `INSERT INTO group_logs (group_id, message, created_at) VALUES (?, ?, ?)`,
+        [groupId, `Membro removido: ${normalized}.`, new Date()]
+      );
+    } catch (logErr) {
+      console.warn("Aviso: não foi possível registrar log do membro:", logErr);
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Erro ao remover membro:", err);
+    res.status(500).json({ error: "Erro ao remover membro" });
+  }
+});
+
+// GET /groups/:id/logs
+router.get("/:id/logs", async (req, res) => {
+  const groupId = req.params.id;
+  try {
+    const [rows] = await db.execute(
+      `
+      SELECT id, message, created_at
+      FROM group_logs
+      WHERE group_id = ?
+      ORDER BY created_at DESC
+      LIMIT 50
+      `,
+      [groupId]
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro ao listar logs:", err);
+    res.status(500).json({ error: "Erro ao listar logs" });
   }
 });
 

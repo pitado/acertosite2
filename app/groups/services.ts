@@ -1,4 +1,4 @@
-import type { Expense, Group, Invite } from "./types";
+import type { Expense, Group, Invite, LogEntry, Member } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -49,6 +49,30 @@ export const Services = {
     if (!r.ok) throw new Error((await r.json()).error || "Falha ao convidar");
     return (await r.json()) as { token: string };
   },
+  async listMembers(groupId: string) {
+    const r = await fetch(buildUrl(`/groups/${groupId}/members`));
+    return r.ok ? ((await r.json()) as Member[]) : [];
+  },
+  async addMember(groupId: string, email: string) {
+    const r = await fetch(buildUrl(`/groups/${groupId}/members`), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    if (!r.ok) throw new Error((await r.json()).error || "Falha ao adicionar membro");
+  },
+  async removeMember(groupId: string, email: string) {
+    const r = await fetch(buildUrl(`/groups/${groupId}/members`), {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    if (!r.ok) throw new Error((await r.json()).error || "Falha ao remover membro");
+  },
+  async listLogs(groupId: string) {
+    const r = await fetch(buildUrl(`/groups/${groupId}/logs`));
+    return r.ok ? ((await r.json()) as LogEntry[]) : [];
+  },
   async listExpenses(groupId: string) {
     const r = await fetch(buildUrl(`/expenses/${groupId}`));
     return r.ok ? ((await r.json()) as Expense[]) : [];
@@ -78,5 +102,14 @@ export const Services = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ proofUrl: dataUrl, paid: true, by }),
     });
+  },
+  async acceptInvite(token: string, email: string) {
+    const r = await fetch(buildUrl(`/invites/${token}/accept`), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    if (!r.ok) throw new Error((await r.json()).error || "Falha ao aceitar convite");
+    return (await r.json()) as { ok: boolean; group_id: string };
   },
 };

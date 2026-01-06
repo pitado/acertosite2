@@ -1,12 +1,24 @@
-import { Expense, Group } from "../types";
+import { Expense, Group, Invite, LogEntry, Member } from "../types";
 import { GroupSummary } from "./GroupSummary";
+import { MemberList } from "./MemberList";
+import { ActivityLog } from "./ActivityLog";
 
 export function GroupDetailsPanel({
   group,
   expenses,
+  invites,
+  members,
+  logs,
+  onRefreshMembers,
+  onCreateInvite,
 }: {
   group: Group | null;
   expenses: Expense[] | null;
+  invites: Invite[] | null;
+  members: Member[] | null;
+  logs: LogEntry[] | null;
+  onRefreshMembers: () => Promise<void>;
+  onCreateInvite: () => Promise<string | null>;
 }) {
   if (!group || !expenses) {
     return (
@@ -21,9 +33,45 @@ export function GroupDetailsPanel({
     .filter((e) => !e.paid)
     .reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
+  const latestInvite = invites?.[0]?.token
+    ? `${location.origin}/invite/${invites[0].token}`
+    : null;
+
   return (
     <div className="grid gap-4">
       <GroupSummary group={group} expenses={expenses} />
+      <div className="rounded-2xl border border-emerald-800/60 bg-emerald-900/40 p-4 text-sm text-emerald-100/80">
+        <div className="font-semibold text-emerald-50 mb-2">Convites</div>
+        {latestInvite ? (
+          <div className="flex flex-col gap-2">
+            <span className="text-xs break-all">{latestInvite}</span>
+            <button
+              className="self-start px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-emerald-950 text-xs font-semibold"
+              onClick={async () => {
+                await navigator.clipboard.writeText(latestInvite);
+              }}
+            >
+              Copiar link
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <span className="text-xs">Nenhum convite ativo.</span>
+            <button
+              className="self-start px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-emerald-950 text-xs font-semibold"
+              onClick={async () => {
+                await onCreateInvite();
+              }}
+            >
+              Criar convite
+            </button>
+          </div>
+        )}
+      </div>
+      {members && (
+        <MemberList groupId={group.id} members={members} onRefresh={onRefreshMembers} />
+      )}
+      {logs && <ActivityLog logs={logs} />}
       <div className="rounded-2xl border border-emerald-800/60 bg-emerald-900/40 p-4 text-sm text-emerald-100/80">
         <div className="font-semibold text-emerald-50 mb-1">Dica rápida</div>
         <p>

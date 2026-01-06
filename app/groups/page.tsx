@@ -9,7 +9,7 @@ import { GroupModal } from "./components/GroupModal";
 import { ConfirmDeleteModal } from "./components/ConfirmDeleteModal";
 import { EmptyState } from "./components/EmptyState";
 import { GroupDetailsPanel } from "./components/GroupDetailsPanel";
-import type { Expense, Group } from "./types";
+import type { Expense, Group, Invite, LogEntry, Member } from "./types";
 import { Services } from "./services";
 
 export default function GroupsPage() {
@@ -22,6 +22,9 @@ export default function GroupsPage() {
 
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [selectedExpenses, setSelectedExpenses] = useState<Expense[] | null>(null);
+  const [selectedInvites, setSelectedInvites] = useState<Invite[] | null>(null);
+  const [selectedMembers, setSelectedMembers] = useState<Member[] | null>(null);
+  const [selectedLogs, setSelectedLogs] = useState<LogEntry[] | null>(null);
 
   // modal grupo
   const [open, setOpen] = useState(false);
@@ -49,10 +52,21 @@ export default function GroupsPage() {
     (async () => {
       if (!selectedGroupId) {
         setSelectedExpenses(null);
+        setSelectedInvites(null);
+        setSelectedMembers(null);
+        setSelectedLogs(null);
         return;
       }
       const data = await Services.listExpenses(selectedGroupId);
       setSelectedExpenses(data);
+      const [invites, members, logs] = await Promise.all([
+        Services.listInvites(selectedGroupId),
+        Services.listMembers(selectedGroupId),
+        Services.listLogs(selectedGroupId),
+      ]);
+      setSelectedInvites(invites);
+      setSelectedMembers(members);
+      setSelectedLogs(logs);
     })();
   }, [selectedGroupId]);
 
@@ -100,6 +114,20 @@ export default function GroupsPage() {
     } catch (e: any) {
       setError(e.message || "Erro ao excluir");
     }
+  }
+
+  async function refreshMembers() {
+    if (!selectedGroupId) return;
+    const members = await Services.listMembers(selectedGroupId);
+    setSelectedMembers(members);
+  }
+
+  async function handleCreateInvite() {
+    if (!selectedGroupId) return null;
+    const invite = await Services.createInvite(selectedGroupId);
+    const invites = await Services.listInvites(selectedGroupId);
+    setSelectedInvites(invites);
+    return invite.token;
   }
 
   return (
@@ -186,7 +214,15 @@ export default function GroupsPage() {
                 </button>
               ))}
             </div>
-            <GroupDetailsPanel group={selectedGroup} expenses={selectedExpenses} />
+            <GroupDetailsPanel
+              group={selectedGroup}
+              expenses={selectedExpenses}
+              invites={selectedInvites}
+              members={selectedMembers}
+              logs={selectedLogs}
+              onRefreshMembers={refreshMembers}
+              onCreateInvite={handleCreateInvite}
+            />
           </div>
         )}
       </main>
