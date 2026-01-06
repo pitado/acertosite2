@@ -11,6 +11,7 @@ import { EmptyState } from "./components/EmptyState";
 import { GroupDetailsPanel } from "./components/GroupDetailsPanel";
 import type { Expense, Group, Invite, LogEntry, Member } from "./types";
 import { Services } from "./services";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 
 export default function GroupsPage() {
   const ownerEmail =
@@ -132,7 +133,7 @@ export default function GroupsPage() {
 
   return (
     <div className="min-h-screen bg-[#0f2a24] text-white p-4 md:p-8">
-      <header className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+      <header className="max-w-6xl mx-auto flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight flex items-center gap-3">
             <span className="text-emerald-300">AcertÔ</span>
@@ -146,15 +147,35 @@ export default function GroupsPage() {
           <span className="sr-only">Grupos</span>
         </div>
 
-        <button
-          onClick={() => {
-            setEditing(null);
-            setOpen(true);
-          }}
-          className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-emerald-950 inline-flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" /> Criar grupo
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          {ownerEmail && (
+            <span className="px-3 py-1 rounded-full bg-emerald-900/60 border border-emerald-800/60 text-xs text-emerald-100/80">
+              {ownerEmail}
+            </span>
+          )}
+          <button
+            onClick={async () => {
+              const supabase = getSupabaseClient();
+              if (supabase) {
+                await supabase.auth.signOut();
+              }
+              localStorage.removeItem("acerto_email");
+              window.location.href = "/login";
+            }}
+            className="px-3 py-2 rounded-xl border border-emerald-800/60 text-emerald-100/90 hover:bg-emerald-800/40 text-sm"
+          >
+            Sair
+          </button>
+          <button
+            onClick={() => {
+              setEditing(null);
+              setOpen(true);
+            }}
+            className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-emerald-950 inline-flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" /> Criar grupo
+          </button>
+        </div>
       </header>
 
       <section className="max-w-6xl mx-auto mt-6">
