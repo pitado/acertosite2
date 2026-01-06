@@ -4,7 +4,7 @@ import { Link as LinkIcon, Pencil, Trash2, Wallet } from "lucide-react";
 
 import type { Expense, Group, Invite } from "../types";
 import { Services } from "../services";
-import { formatBRL } from "../constants";
+import { formatBRL, getAppUrl } from "../constants";
 import { CountdownBadge } from "./CountdownBadge";
 import { ExpenseModal } from "./ExpenseModal";
 import { ExpenseRow } from "./ExpenseRow";
@@ -41,7 +41,7 @@ export function GroupCard({
 
   async function newInvite() {
     const inv = await Services.createInvite(g.id);
-    const url = `${location.origin}/invite/${inv.token}`;
+    const url = `${getAppUrl()}/invite/${inv.token}`;
     try {
       await navigator.clipboard.writeText(url);
       alert("Link de convite copiado!\n" + url);

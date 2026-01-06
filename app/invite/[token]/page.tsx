@@ -22,6 +22,7 @@ export default function InvitePage({ params }: { params: { token: string } }) {
     setError(null);
     try {
       await Services.acceptInvite(params.token, email.trim().toLowerCase());
+      localStorage.setItem("acerto_email", email.trim().toLowerCase());
       setStatus("done");
       setTimeout(() => router.push("/groups"), 1000);
     } catch (err: any) {

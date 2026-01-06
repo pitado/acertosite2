@@ -14,8 +14,8 @@ import { Services } from "./services";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 
 export default function GroupsPage() {
-  const ownerEmail =
-    typeof window !== "undefined" ? (localStorage.getItem("acerto_email") || "").toLowerCase() : "";
+  const [ownerEmail, setOwnerEmail] = useState("");
+  const [authReady, setAuthReady] = useState(false);
   const [search, setSearch] = useState("");
   const [items, setItems] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,7 +33,30 @@ export default function GroupsPage() {
   const [confirm, setConfirm] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
+    const cached = localStorage.getItem("acerto_email");
+    if (cached) setOwnerEmail(cached.toLowerCase());
     (async () => {
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        setAuthReady(true);
+        return;
+      }
+      const { data } = await supabase.auth.getSession();
+      const email = data.session?.user?.email;
+      if (email) {
+        localStorage.setItem("acerto_email", email);
+        setOwnerEmail(email.toLowerCase());
+      }
+      setAuthReady(true);
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      if (!ownerEmail) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
         const data = await Services.listGroups(ownerEmail, "");
@@ -194,7 +217,15 @@ export default function GroupsPage() {
           </div>
         )}
 
-        {loading ? (
+        {!authReady ? (
+          <div className="flex items-center justify-center py-24 text-emerald-100/80">
+            <Loader2 className="h-6 w-6 mr-2 animate-spin" /> Verificando conta…
+          </div>
+        ) : !ownerEmail ? (
+          <div className="rounded-2xl border border-emerald-800/60 bg-emerald-900/40 p-6 text-emerald-100/80">
+            Faça login para ver seus grupos.
+          </div>
+        ) : loading ? (
           <div className="flex items-center justify-center py-24 text-emerald-100/80">
             <Loader2 className="h-6 w-6 mr-2 animate-spin" /> Carregando…
           </div>

@@ -2,6 +2,7 @@ import { Expense, Group, Invite, LogEntry, Member } from "../types";
 import { GroupSummary } from "./GroupSummary";
 import { MemberList } from "./MemberList";
 import { ActivityLog } from "./ActivityLog";
+import { getAppUrl } from "../constants";
 
 export function GroupDetailsPanel({
   group,
@@ -34,7 +35,7 @@ export function GroupDetailsPanel({
     .reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
   const latestInvite = invites?.[0]?.token
-    ? `${location.origin}/invite/${invites[0].token}`
+    ? `${getAppUrl()}/invite/${invites[0].token}`
     : null;
 
   return (

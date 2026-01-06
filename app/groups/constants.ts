@@ -9,3 +9,7 @@ export const CATEGORY_MAP: Record<string, string[]> = {
 export const CATEGORY_LIST = Object.keys(CATEGORY_MAP);
 
 export const formatBRL = (n: number) => `R$ ${Number(n).toFixed(2)}`;
+
+export const getAppUrl = () =>
+  process.env.NEXT_PUBLIC_APP_URL ||
+  (typeof window !== "undefined" ? window.location.origin : "");
