@@ -80,6 +80,9 @@ router.post("/", async (req, res) => {
 
     res.status(201).json({ id: groupId });
   } catch (err) {
+    if (err && err.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({ error: "Você já possui um grupo com esse nome." });
+    }
     console.error("Erro ao criar grupo:", err);
     res.status(500).json({ error: "Erro ao criar grupo" });
   }
@@ -149,6 +152,9 @@ router.patch("/:id", async (req, res) => {
 
     res.json({ ok: true });
   } catch (err) {
+    if (err && err.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({ error: "Você já possui um grupo com esse nome." });
+    }
     console.error("Erro ao atualizar grupo:", err);
     res.status(500).json({ error: "Erro ao atualizar grupo" });
   }
