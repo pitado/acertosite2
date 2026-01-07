@@ -5,6 +5,9 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "AcertÔ",
   description: "Divisão de despesas",
+  icons: {
+    icon: "/pig.svg",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
