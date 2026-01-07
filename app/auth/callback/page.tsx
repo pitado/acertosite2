@@ -3,21 +3,26 @@ export const dynamic = "force-dynamic";
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { supabaseClient } from "@/lib/supabaseClient";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 
 export default function AuthCallback() {
   const router = useRouter();
 
   useEffect(() => {
     (async () => {
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        router.replace("/login");
+        return;
+      }
       try {
         // Troca o ?code= pela sessão (PKCE)
-        await supabaseClient.auth.exchangeCodeForSession(window.location.href);
+        await supabase.auth.exchangeCodeForSession(window.location.href);
       } catch {
         // Se já tiver sessão, segue o fluxo
       }
 
-      const { data } = await supabaseClient.auth.getSession();
+      const { data } = await supabase.auth.getSession();
       const email = data.session?.user?.email;
       if (email) {
         localStorage.setItem("acerto_email", email);
