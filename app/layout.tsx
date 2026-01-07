@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "AcertÔ",
   description: "Divisão de despesas",
   icons: {
-    icon: "/pig.svg",
+    icon: "/logo.svg",
   },
 };
 
