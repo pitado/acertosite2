@@ -1,16 +1,22 @@
 "use client";
 export const dynamic = "force-dynamic";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabaseClient } from "@/lib/supabaseClient";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 
 export default function LoginPage() {
   const router = useRouter();
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabaseClient.auth.getSession();
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        setAuthError("Configuração do Supabase não encontrada.");
+        return;
+      }
+      const { data } = await supabase.auth.getSession();
       const email = data.session?.user?.email;
       if (email) {
         localStorage.setItem("acerto_email", email);
@@ -20,173 +26,68 @@ export default function LoginPage() {
   }, [router]);
 
   async function signInWithGoogle() {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      setAuthError("Configuração do Supabase não encontrada.");
+      return;
+    }
     const redirectTo = `${window.location.origin}/auth/callback`;
-    await supabaseClient.auth.signInWithOAuth({
+    await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo },
     });
   }
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        background:
-          "radial-gradient(circle at 30% 30%, #0f3b31 0%, #071f1a 70%)",
-        color: "#e6fff7",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
-      {/* BLOCO CENTRAL */}
-      <div
-        style={{
-          width: "min(460px, 90vw)",
-          padding: "38px 34px 36px",
-          background: "#143A31",
-          borderRadius: 20,
-          boxShadow: "0 25px 50px rgba(0,0,0,0.48)",
-          textAlign: "center",
-        }}
-      >
-        {/* LOGO + TÍTULOS */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 8,
-            marginBottom: 24,
-          }}
-        >
+    <main className="min-h-screen flex items-center justify-center bg-[radial-gradient(circle_at_30%_30%,#0f3b31_0%,#071f1a_70%)] text-emerald-50 relative overflow-hidden px-4">
+      <div className="absolute inset-0 opacity-30">
+        <div className="absolute -top-24 -right-24 h-64 w-64 rounded-full bg-emerald-400/20 blur-3xl" />
+        <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-emerald-400/20 blur-3xl" />
+      </div>
+
+      <div className="relative w-full max-w-md rounded-2xl border border-emerald-800/60 bg-emerald-900/80 p-8 shadow-[0_25px_50px_rgba(0,0,0,0.45)]">
+        <div className="flex flex-col items-center gap-3 text-center mb-6">
           <img
             src="/logo.svg"
             alt="Logo do AcertÔ"
-            style={{
-              width: 220,
-              height: "auto",
-              filter: "drop-shadow(0 8px 18px rgba(0,0,0,0.45))",
-            }}
+            className="w-48 drop-shadow-[0_8px_18px_rgba(0,0,0,0.45)]"
           />
-
-          <h1
-            style={{
-              margin: 0,
-              fontSize: 28,
-              fontFamily:
-                "'Arial Black', 'Impact', 'Segoe UI Black', system-ui, sans-serif",
-              letterSpacing: 0.3,
-              color: "#ffffff",
-              textShadow: "0 2px 0 rgba(0,0,0,0.25)",
-              transition: "color 0.3s ease, transform 0.3s ease",
-              cursor: "default",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "#1dd1a1";
-              e.currentTarget.style.transform = "scale(1.03)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = "#ffffff";
-              e.currentTarget.style.transform = "scale(1)";
-            }}
-          >
+          <h1 className="text-2xl font-extrabold tracking-wide text-white">
             Bem-vindo ao AcertÔ
           </h1>
-
-          <p
-            style={{
-              margin: 0,
-              fontSize: 17,
-              fontFamily:
-                "'Arial Black', 'Impact', 'Segoe UI Black', system-ui, sans-serif",
-              color: "#ffffff",
-              letterSpacing: 0.3,
-              transition: "color 0.3s ease, transform 0.3s ease",
-              cursor: "default",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "#1dd1a1";
-              e.currentTarget.style.transform = "scale(1.03)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = "#ffffff";
-              e.currentTarget.style.transform = "scale(1)";
-            }}
-          >
-            A dívida vai, a amizade fica
+          <p className="text-sm text-emerald-100/80">
+            A dívida vai, a amizade fica.
           </p>
         </div>
 
-        {/* BOTÃO GOOGLE */}
         <button
           onClick={signInWithGoogle}
-          style={{
-            width: "100%",
-            padding: 15,
-            borderRadius: 12,
-            border: "1px solid rgba(255,255,255,0.12)",
-            background: "rgba(0,0,0,0.15)",
-            color: "#e6fff7",
-            fontWeight: 800,
-            fontSize: 16,
-            cursor: "pointer",
-            transition: "all 0.18s ease",
-          }}
-          onMouseOver={(e) =>
-            (e.currentTarget.style.background = "rgba(29,209,161,0.22)")
-          }
-          onMouseOut={(e) =>
-            (e.currentTarget.style.background = "rgba(0,0,0,0.15)")
-          }
+          className="w-full py-3 rounded-xl border border-white/10 bg-black/20 hover:bg-emerald-500/20 transition text-emerald-50 font-semibold"
         >
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 10,
-            }}
-          >
+          <span className="inline-flex items-center justify-center gap-3">
             <img
               src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
               alt=""
               width={18}
               height={18}
-              style={{ transform: "translateY(-1px)" }}
             />
             Continuar com Google
           </span>
         </button>
+
+        {authError && (
+          <div className="mt-4 text-xs text-red-200 text-center">
+            {authError}
+          </div>
+        )}
+
+        <div className="mt-6 text-xs text-emerald-100/60 text-center">
+          Entre com sua conta Google para criar grupos, dividir despesas e acompanhar os acertos.
+        </div>
       </div>
 
-      {/* ASSINATURA “Feito por Pita” */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 6, // mais embaixo
-          left: "50%",
-          transform: "translateX(-50%)",
-          opacity: 0.5,
-          transition: "opacity 0.3s ease, transform 0.3s ease",
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.opacity = "0.9";
-          e.currentTarget.style.transform = "translateX(-50%) scale(1.05)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.opacity = "0.5";
-          e.currentTarget.style.transform = "translateX(-50%) scale(1)";
-        }}
-      >
-        <img
-          src="/feitoporpita.png"
-          alt="Feito por Pita"
-          style={{ width: 100, height: "auto" }} // menor
-        />
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 opacity-60 hover:opacity-90 transition">
+        <img src="/feitoporpita.png" alt="Feito por Pita" className="w-20 h-auto" />
       </div>
     </main>
   );
