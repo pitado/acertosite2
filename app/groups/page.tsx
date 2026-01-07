@@ -26,6 +26,7 @@ export default function GroupsPage() {
   const [selectedInvites, setSelectedInvites] = useState<Invite[] | null>(null);
   const [selectedMembers, setSelectedMembers] = useState<Member[] | null>(null);
   const [selectedLogs, setSelectedLogs] = useState<LogEntry[] | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   // modal grupo
   const [open, setOpen] = useState(false);
@@ -51,25 +52,28 @@ export default function GroupsPage() {
     })();
   }, []);
 
+  async function refreshGroups() {
+    if (!ownerEmail) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const data = await Services.listGroups(ownerEmail, "");
+      setItems(data);
+      if (data.length > 0 && !selectedGroupId) {
+        setSelectedGroupId(data[0].id);
+      }
+      setLastUpdated(new Date());
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
-    (async () => {
-      if (!ownerEmail) {
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
-      try {
-        const data = await Services.listGroups(ownerEmail, "");
-        setItems(data);
-        if (data.length > 0 && !selectedGroupId) {
-          setSelectedGroupId(data[0].id);
-        }
-      } catch (e: any) {
-        setError(e.message);
-      } finally {
-        setLoading(false);
-      }
-    })();
+    refreshGroups();
   }, [ownerEmail, selectedGroupId]);
 
   useEffect(() => {
@@ -179,6 +183,12 @@ export default function GroupsPage() {
             Sair
           </button>
           <button
+            onClick={refreshGroups}
+            className="px-3 py-2 rounded-xl border border-emerald-800/60 text-emerald-100/90 hover:bg-emerald-800/40 text-sm"
+          >
+            Atualizar
+          </button>
+          <button
             onClick={() => {
               setEditing(null);
               setOpen(true);
@@ -199,7 +209,20 @@ export default function GroupsPage() {
             placeholder="Buscar grupos…"
             className="bg-transparent outline-none w-full text-emerald-50 placeholder:text-emerald-200/60"
           />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="text-xs text-emerald-200/80 hover:text-emerald-100 px-2"
+            >
+              Limpar
+            </button>
+          )}
         </div>
+        {lastUpdated && (
+          <div className="mt-2 text-xs text-emerald-100/60">
+            Atualizado em {lastUpdated.toLocaleTimeString()}
+          </div>
+        )}
       </section>
 
       <section className="max-w-6xl mx-auto mt-4 grid gap-3 sm:grid-cols-3">
