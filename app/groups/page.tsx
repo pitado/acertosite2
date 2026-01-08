@@ -6,7 +6,7 @@ import { Plus, Search, X } from "lucide-react";
 import { GroupCard } from "./components/GroupCard";
 import EmptyState from "./components/EmptyState";
 
-// ✅ se existir no seu projeto (pelo seu log, existe)
+// se existir no seu projeto
 import type { Group } from "./types";
 import { Services } from "./services";
 
@@ -38,26 +38,29 @@ export default function GroupsPage() {
   const [search, setSearch] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
 
-  // ✅ pega o email salvo no login
   useEffect(() => {
     const email =
       typeof window !== "undefined" ? localStorage.getItem("acerto_email") : null;
     setOwnerEmail(email ?? "");
   }, []);
 
-  async function loadGroups() {
+  async function loadGroups(email: string) {
     setLoading(true);
 
     try {
-      // ✅ usa o service do seu projeto
-      // (ele deve retornar Group[] já com owner_email/created_at/updated_at)
-      const list = await Services.listGroups(ownerEmail || undefined);
+      // ✅ se ainda não tem email, não chama service (evita erro e evita listGroups(""))
+      if (!email) {
+        setGroups([]);
+        return;
+      }
 
-      // ✅ fallback defensivo: garante campos obrigatórios caso venha incompleto
+      // ✅ AQUI: sempre string (nada de undefined)
+      const list = await Services.listGroups(email);
+
       const now = new Date().toISOString();
       const normalized = (list ?? []).map((g: any) => ({
         ...g,
-        owner_email: g.owner_email ?? ownerEmail ?? "sem-email@local",
+        owner_email: g.owner_email ?? email,
         created_at: g.created_at ?? now,
         updated_at: g.updated_at ?? now,
       })) as Group[];
@@ -71,10 +74,9 @@ export default function GroupsPage() {
   }
 
   useEffect(() => {
-    // quando ownerEmail carregar, busca os grupos
-    if (ownerEmail !== "") loadGroups();
-    // se você quiser carregar mesmo sem email, remova esse if
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // ✅ só carrega quando tiver o email
+    if (ownerEmail) loadGroups(ownerEmail);
+    else setLoading(false);
   }, [ownerEmail]);
 
   const filtered = useMemo(() => {
@@ -180,20 +182,19 @@ export default function GroupsPage() {
                 <GroupCard
                   key={g.id}
                   g={g}
-                  ownerEmail={ownerEmail || g.owner_email || "sem-email@local"}
+                  ownerEmail={ownerEmail || (g as any).owner_email || "sem-email@local"}
                   onEdit={() => alert(`Editar grupo: ${g.name}`)}
                   onDelete={async () => {
                     const ok = confirm(`Tem certeza que deseja excluir "${g.name}"?`);
                     if (!ok) return;
 
-                    // se o seu Services tiver delete, use aqui. Se não tiver, só remove da tela:
                     try {
                       await Services.deleteGroup?.(g.id);
                     } catch {
                       // ignore
                     }
 
-                    await loadGroups();
+                    if (ownerEmail) await loadGroups(ownerEmail);
                   }}
                 />
               ))}
