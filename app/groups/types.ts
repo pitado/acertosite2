@@ -34,3 +34,12 @@ export type Expense = {
   paid: boolean;
   created_at: string;
 };
+
+/**
+ * Usado em app/groups/components/ActivityLog.tsx
+ */
+export type LogEntry = {
+  id: string;
+  message: string;
+  created_at: string;
+};
