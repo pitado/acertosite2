@@ -1,172 +1,183 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence } from "framer-motion";
-import { Info, Loader2, Plus, Search } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
+import GroupCard from "./components/GroupCard";
+import EmptyState from "./components/EmptyState";
 
-import { GroupCard } from "./components/GroupCard";
-import { GroupModal } from "./components/GroupModal";
-import { ConfirmDeleteModal } from "./components/ConfirmDeleteModal";
-import { EmptyState } from "./components/EmptyState";
-import type { Group } from "./types";
-import { Services } from "./services";
+type Group = {
+  id: string;
+  name: string;
+  description?: string | null;
+  membersCount?: number;
+  expensesCount?: number;
+  totalAmount?: number;
+};
+
+function SkeletonCard() {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-5 animate-pulse">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-2 w-full">
+          <div className="h-4 w-2/3 bg-white/10 rounded" />
+          <div className="h-3 w-1/2 bg-white/10 rounded" />
+        </div>
+        <div className="h-9 w-24 bg-white/10 rounded-xl" />
+      </div>
+
+      <div className="mt-4 flex gap-2">
+        <div className="h-7 w-20 bg-white/10 rounded-full" />
+        <div className="h-7 w-24 bg-white/10 rounded-full" />
+        <div className="h-7 w-28 bg-white/10 rounded-full" />
+      </div>
+
+      <div className="mt-5 h-10 w-full bg-white/10 rounded-xl" />
+    </div>
+  );
+}
 
 export default function GroupsPage() {
-  const ownerEmail =
-    typeof window !== "undefined"
-      ? (localStorage.getItem("acerto_email") || "").toLowerCase()
-      : "";
-
-  const [search, setSearch] = useState("");
-  const [items, setItems] = useState<Group[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Group | null>(null);
-  const [confirm, setConfirm] = useState<{ id: string; name: string } | null>(null);
+  // 🔧 Se você já tem fetch/serviço no seu projeto, troque só essa parte mantendo o resto.
+  async function loadGroups() {
+    setLoading(true);
+    try {
+      // Exemplo: busca em API local
+      const res = await fetch("/api/groups", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        setGroups(Array.isArray(data) ? data : data.groups ?? []);
+      } else {
+        setGroups([]);
+      }
+    } catch {
+      setGroups([]);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        const data = await Services.listGroups(ownerEmail, "");
-        setItems(data);
-      } catch (e: any) {
-        setError(e.message);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [ownerEmail]);
+    loadGroups();
+  }, []);
 
   const filtered = useMemo(() => {
-    const s = search.trim().toLowerCase();
-    return s ? items.filter((g) => g.name.toLowerCase().includes(s)) : items;
-  }, [items, search]);
-
-  async function handleSave(p: {
-    name: string;
-    description?: string;
-    emails: string[];
-    roleDateISO?: string;
-  }) {
-    setError(null);
-    try {
-      if (editing) {
-        await Services.updateGroup(editing.id, { ...p });
-      } else {
-        await Services.createGroup(ownerEmail, p);
-      }
-      const re = await Services.listGroups(ownerEmail);
-      setItems(re);
-      setOpen(false);
-      setEditing(null);
-    } catch (e: any) {
-      setError(e.message || "Erro ao salvar");
-    }
-  }
-
-  async function handleDelete(id: string) {
-    try {
-      await Services.deleteGroup(id);
-      setItems((prev) => prev.filter((g) => g.id !== id));
-      setConfirm(null);
-    } catch (e: any) {
-      setError(e.message || "Erro ao excluir");
-    }
-  }
+    const q = search.trim().toLowerCase();
+    if (!q) return groups;
+    return groups.filter((g) => g.name.toLowerCase().includes(q));
+  }, [groups, search]);
 
   return (
-    <div className="min-h-screen bg-[#0f2a24] text-white p-4 md:p-8">
-      <header className="max-w-6xl mx-auto flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <img
-            src="/logo.svg"
-            alt="AcertÔ"
-            className="h-16 w-auto md:h-20 drop-shadow-[0_4px_10px_rgba(0,0,0,.45)]"
-          />
-        </div>
+    <div className="min-h-screen relative overflow-hidden bg-[#071611] text-white">
+      {/* Background glow */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-40 -left-40 h-[420px] w-[420px] rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="absolute top-32 -right-40 h-[520px] w-[520px] rounded-full bg-teal-400/10 blur-3xl" />
+        <div className="absolute bottom-[-160px] left-1/3 h-[520px] w-[520px] rounded-full bg-green-500/10 blur-3xl" />
+      </div>
 
-        <button
-          onClick={() => {
-            setEditing(null);
-            setOpen(true);
-          }}
-          className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-emerald-950 inline-flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" /> Criar grupo
-        </button>
-      </header>
+      {/* Header */}
+      <div className="sticky top-0 z-20 border-b border-white/10 bg-[#071611]/70 backdrop-blur-xl">
+        <div className="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            {/* Se você tiver logo no /public, use assim: */}
+            {/* <img src="/logo.svg" alt="Logo" className="h-9 w-9" /> */}
+            <div className="h-9 w-9 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center">
+              <span className="text-sm font-semibold">A</span>
+            </div>
 
-      <section className="max-w-6xl mx-auto mt-6">
-        <div className="flex items-center gap-2 bg-emerald-900/50 border border-emerald-800/60 rounded-xl p-2">
-          <Search className="h-5 w-5 text-emerald-200/80 ml-2" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar grupos…"
-            className="bg-transparent outline-none w-full text-emerald-50 placeholder:text-emerald-200/60"
-          />
-        </div>
-      </section>
-
-      <main className="max-w-6xl mx-auto mt-6">
-        {error && (
-          <div className="mb-4 rounded-lg border border-red-800/60 bg-red-900/40 p-3 text-sm text-red-100 flex items-center gap-2">
-            <Info className="h-4 w-4" />
-            {error}
+            <div className="leading-tight">
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg sm:text-xl font-semibold tracking-tight">
+                  Seus grupos
+                </h1>
+                <span className="text-xs px-2 py-1 rounded-full border border-white/10 bg-white/5 text-white/70">
+                  {groups.length} total
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-white/60">
+                Crie, busque e gerencie seus grupos de forma rápida.
+              </p>
+            </div>
           </div>
-        )}
 
-        {loading ? (
-          <div className="flex items-center justify-center py-24 text-emerald-100/80">
-            <Loader2 className="h-6 w-6 mr-2 animate-spin" /> Carregando…
-          </div>
-        ) : filtered.length === 0 ? (
-          <EmptyState onCreate={() => setOpen(true)} />
-        ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map((g) => (
-              <GroupCard
-                key={g.id}
-                g={g}
-                ownerEmail={ownerEmail}
-                onEdit={() => {
-                  setEditing(g);
-                  setOpen(true);
-                }}
-                onDelete={() => setConfirm({ id: g.id, name: g.name })}
-              />
-            ))}
-          </div>
-        )}
-      </main>
-
-      <AnimatePresence>
-        {open && (
-          <GroupModal
-            key={editing?.id || "create"}
-            open={open}
-            onClose={() => {
-              setOpen(false);
-              setEditing(null);
+          <button
+            onClick={() => {
+              // 🔧 Se você já tem modal de criar grupo, troca isso pra abrir o modal.
+              // Ex.: setIsCreateOpen(true)
+              alert("Abrir modal de criar grupo (troque aqui pelo seu modal).");
             }}
-            initial={editing}
-            onSave={handleSave}
-          />
-        )}
-      </AnimatePresence>
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/90 hover:bg-emerald-500 text-black font-medium px-4 py-2 transition"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Novo grupo</span>
+            <span className="sm:hidden">Novo</span>
+          </button>
+        </div>
+      </div>
 
-      <AnimatePresence>
-        {confirm && (
-          <ConfirmDeleteModal
-            name={confirm.name}
-            onCancel={() => setConfirm(null)}
-            onConfirm={() => handleDelete(confirm.id)}
-          />
-        )}
-      </AnimatePresence>
+      {/* Content */}
+      <div className="mx-auto max-w-6xl px-4 py-6">
+        {/* Search */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar grupos..."
+              className="w-full rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl pl-10 pr-10 py-2.5 text-sm outline-none placeholder:text-white/40 focus:border-emerald-400/40 focus:ring-2 focus:ring-emerald-400/10"
+            />
+            {search.trim().length > 0 && (
+              <button
+                onClick={() => setSearch("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg hover:bg-white/10 flex items-center justify-center transition"
+                aria-label="Limpar busca"
+              >
+                <X className="h-4 w-4 text-white/70" />
+              </button>
+            )}
+          </div>
+
+          <div className="text-sm text-white/60 sm:whitespace-nowrap">
+            Mostrando{" "}
+            <span className="text-white/80 font-medium">{filtered.length}</span>{" "}
+            {filtered.length === 1 ? "grupo" : "grupos"}
+          </div>
+        </div>
+
+        {/* Grid */}
+        <div className="mt-6">
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <SkeletonCard key={i} />
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              hasSearch={search.trim().length > 0}
+              onCreate={() => {
+                alert("Abrir modal de criar grupo (troque aqui pelo seu modal).");
+              }}
+              onClearSearch={() => setSearch("")}
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {filtered.map((g) => (
+                <GroupCard
+                  key={g.id}
+                  group={g}
+                  onRefresh={loadGroups}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
