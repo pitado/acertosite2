@@ -4,8 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Plus, Search, X } from "lucide-react";
 
 import { GroupCard } from "./components/GroupCard";
-import { EmptyState } from "./components/EmptyState";
+import EmptyState from "./components/EmptyState";
+
+// ✅ se existir no seu projeto (pelo seu log, existe)
 import type { Group } from "./types";
+import { Services } from "./services";
 
 function SkeletonCard() {
   return (
@@ -33,9 +36,9 @@ export default function GroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [ownerEmail, setOwnerEmail] = useState<string>("");
+  const [ownerEmail, setOwnerEmail] = useState("");
 
-  // pega email salvo no login (ajuste a key se no seu projeto for outra)
+  // ✅ pega o email salvo no login
   useEffect(() => {
     const email =
       typeof window !== "undefined" ? localStorage.getItem("acerto_email") : null;
@@ -44,31 +47,20 @@ export default function GroupsPage() {
 
   async function loadGroups() {
     setLoading(true);
+
     try {
-      const res = await fetch("/api/groups", { cache: "no-store" });
+      // ✅ usa o service do seu projeto
+      // (ele deve retornar Group[] já com owner_email/created_at/updated_at)
+      const list = await Services.listGroups(ownerEmail || undefined);
 
-      if (!res.ok) {
-        setGroups([]);
-        return;
-      }
-
-      const data = await res.json();
-      const list = Array.isArray(data) ? data : data.groups ?? [];
-
-      // ✅ Normaliza para o tipo Group REAL (./types.ts)
-      const nowIso = new Date().toISOString();
-
-      const normalized: Group[] = list.map((item: any) => ({
-        id: String(item.id ?? ""),
-        name: String(item.name ?? "Sem nome"),
-        description: item.description ?? undefined,
-
-        owner_email: String(item.owner_email ?? ownerEmail ?? "sem-email@local"),
-        role_date: item.role_date ?? null,
-
-        created_at: String(item.created_at ?? nowIso),
-        updated_at: String(item.updated_at ?? item.created_at ?? nowIso),
-      }));
+      // ✅ fallback defensivo: garante campos obrigatórios caso venha incompleto
+      const now = new Date().toISOString();
+      const normalized = (list ?? []).map((g: any) => ({
+        ...g,
+        owner_email: g.owner_email ?? ownerEmail ?? "sem-email@local",
+        created_at: g.created_at ?? now,
+        updated_at: g.updated_at ?? now,
+      })) as Group[];
 
       setGroups(normalized);
     } catch {
@@ -79,9 +71,11 @@ export default function GroupsPage() {
   }
 
   useEffect(() => {
-    loadGroups();
+    // quando ownerEmail carregar, busca os grupos
+    if (ownerEmail !== "") loadGroups();
+    // se você quiser carregar mesmo sem email, remova esse if
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [ownerEmail]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -186,20 +180,17 @@ export default function GroupsPage() {
                 <GroupCard
                   key={g.id}
                   g={g}
-                  ownerEmail={ownerEmail || "sem-email@local"}
-                  onEdit={() => {
-                    alert(`Editar grupo: ${g.name} (troque por seu modal/rota)`);
-                  }}
+                  ownerEmail={ownerEmail || g.owner_email || "sem-email@local"}
+                  onEdit={() => alert(`Editar grupo: ${g.name}`)}
                   onDelete={async () => {
-                    const ok = confirm(
-                      `Tem certeza que deseja excluir "${g.name}"?`
-                    );
+                    const ok = confirm(`Tem certeza que deseja excluir "${g.name}"?`);
                     if (!ok) return;
 
+                    // se o seu Services tiver delete, use aqui. Se não tiver, só remove da tela:
                     try {
-                      await fetch(`/api/groups/${g.id}`, { method: "DELETE" });
+                      await Services.deleteGroup?.(g.id);
                     } catch {
-                      // se não existir ainda, só ignora
+                      // ignore
                     }
 
                     await loadGroups();
