@@ -5,24 +5,7 @@ import { Plus, Search, X } from "lucide-react";
 
 import { GroupCard } from "./components/GroupCard";
 import { EmptyState } from "./components/EmptyState";
-
-// ✅ Use o tipo do seu projeto (se existir). Se não existir, você pode voltar pro type local.
-// Tentei manter o mais compatível possível com o que o GroupCard normalmente espera.
-type Group = {
-  id: string;
-  name: string;
-  description?: string | null;
-
-  // campos comuns que podem existir no seu projeto:
-  membersCount?: number;
-  expensesCount?: number;
-  totalAmount?: number;
-
-  // às vezes vem assim do backend:
-  members_count?: number;
-  expenses_count?: number;
-  total_amount?: number;
-};
+import type { Group } from "./types";
 
 function SkeletonCard() {
   return (
@@ -52,25 +35,42 @@ export default function GroupsPage() {
   const [search, setSearch] = useState("");
   const [ownerEmail, setOwnerEmail] = useState<string>("");
 
-  // ✅ pega o email salvo no login (você comentou que usa localStorage)
+  // pega email salvo no login (ajuste a key se no seu projeto for outra)
   useEffect(() => {
-    const email = typeof window !== "undefined" ? localStorage.getItem("acerto_email") : null;
+    const email =
+      typeof window !== "undefined" ? localStorage.getItem("acerto_email") : null;
     setOwnerEmail(email ?? "");
   }, []);
 
-  // 🔧 mantém seu fetch (se você já tiver outro serviço, pode trocar só aqui)
   async function loadGroups() {
     setLoading(true);
     try {
       const res = await fetch("/api/groups", { cache: "no-store" });
 
-      if (res.ok) {
-        const data = await res.json();
-        const list = Array.isArray(data) ? data : data.groups ?? [];
-        setGroups(list);
-      } else {
+      if (!res.ok) {
         setGroups([]);
+        return;
       }
+
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : data.groups ?? [];
+
+      // ✅ Normaliza para o tipo Group REAL (./types.ts)
+      const nowIso = new Date().toISOString();
+
+      const normalized: Group[] = list.map((item: any) => ({
+        id: String(item.id ?? ""),
+        name: String(item.name ?? "Sem nome"),
+        description: item.description ?? undefined,
+
+        owner_email: String(item.owner_email ?? ownerEmail ?? "sem-email@local"),
+        role_date: item.role_date ?? null,
+
+        created_at: String(item.created_at ?? nowIso),
+        updated_at: String(item.updated_at ?? item.created_at ?? nowIso),
+      }));
+
+      setGroups(normalized);
     } catch {
       setGroups([]);
     } finally {
@@ -80,6 +80,7 @@ export default function GroupsPage() {
 
   useEffect(() => {
     loadGroups();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filtered = useMemo(() => {
@@ -174,26 +175,27 @@ export default function GroupsPage() {
               ))}
             </div>
           ) : filtered.length === 0 ? (
-            // ✅ Mantive o EmptyState simples pra não bater em tipagem diferente
-            <EmptyState onCreate={handleCreate} />
+            <EmptyState
+              hasSearch={search.trim().length > 0}
+              onCreate={handleCreate}
+              onClearSearch={() => setSearch("")}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filtered.map((g) => (
                 <GroupCard
                   key={g.id}
-                  // ✅ aqui é o principal: o GroupCard espera "g", não "group"
                   g={g}
-                  // ✅ ele espera ownerEmail
                   ownerEmail={ownerEmail || "sem-email@local"}
-                  // ✅ e também callbacks
                   onEdit={() => {
                     alert(`Editar grupo: ${g.name} (troque por seu modal/rota)`);
                   }}
                   onDelete={async () => {
-                    const ok = confirm(`Tem certeza que deseja excluir "${g.name}"?`);
+                    const ok = confirm(
+                      `Tem certeza que deseja excluir "${g.name}"?`
+                    );
                     if (!ok) return;
 
-                    // Se você tiver endpoint delete, faça aqui:
                     try {
                       await fetch(`/api/groups/${g.id}`, { method: "DELETE" });
                     } catch {
