@@ -41,11 +41,12 @@ export default function GroupsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  // 🔧 Se você já tem fetch/serviço no seu projeto, troque só essa parte mantendo o resto.
+  // 🔧 Se você tem auth no projeto, troque aqui pra pegar o email real do usuário logado
+  const ownerEmail = ""; // ex: session?.user?.email ?? ""
+
   async function loadGroups() {
     setLoading(true);
     try {
-      // Exemplo: busca em API local
       const res = await fetch("/api/groups", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
@@ -69,6 +70,26 @@ export default function GroupsPage() {
     if (!q) return groups;
     return groups.filter((g) => g.name.toLowerCase().includes(q));
   }, [groups, search]);
+
+  function handleCreate() {
+    alert("Abrir modal de criar grupo (troque aqui pelo seu modal).");
+  }
+
+  function handleEdit(g: Group) {
+    alert(`Editar grupo: ${g.name} (troque aqui pelo seu modal/rota)`);
+  }
+
+  async function handleDelete(g: Group) {
+    const ok = confirm(`Tem certeza que quer deletar o grupo "${g.name}"?`);
+    if (!ok) return;
+
+    // 🔧 Ajuste para sua API real:
+    // await fetch(`/api/groups/${g.id}`, { method: "DELETE" })
+    alert(`Deletar grupo: ${g.name} (implemente a chamada DELETE na sua API)`);
+
+    // Recarrega lista depois (se sua API deletar de verdade)
+    await loadGroups();
+  }
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-[#071611] text-white">
@@ -105,11 +126,7 @@ export default function GroupsPage() {
           </div>
 
           <button
-            onClick={() => {
-              // 🔧 Se você já tem modal de criar grupo, troca isso pra abrir o modal.
-              // Ex.: setIsCreateOpen(true)
-              alert("Abrir modal de criar grupo (troque aqui pelo seu modal).");
-            }}
+            onClick={handleCreate}
             className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/90 hover:bg-emerald-500 text-black font-medium px-4 py-2 transition"
           >
             <Plus className="h-4 w-4" />
@@ -158,20 +175,42 @@ export default function GroupsPage() {
               ))}
             </div>
           ) : filtered.length === 0 ? (
-            <EmptyState
-              hasSearch={search.trim().length > 0}
-              onCreate={() => {
-                alert("Abrir modal de criar grupo (troque aqui pelo seu modal).");
-              }}
-              onClearSearch={() => setSearch("")}
-            />
+            search.trim().length > 0 ? (
+              // Empty state para busca (sem depender de props do componente)
+              <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
+                <div className="text-lg font-semibold">Nada encontrado</div>
+                <p className="mt-1 text-sm text-white/60">
+                  Nenhum grupo corresponde à sua busca.
+                </p>
+
+                <div className="mt-4 flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={() => setSearch("")}
+                    className="rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-4 py-2 text-sm transition"
+                  >
+                    Limpar busca
+                  </button>
+                  <button
+                    onClick={handleCreate}
+                    className="rounded-xl bg-emerald-500/90 hover:bg-emerald-500 text-black font-medium px-4 py-2 text-sm transition"
+                  >
+                    Criar novo grupo
+                  </button>
+                </div>
+              </div>
+            ) : (
+              // EmptyState do seu componente (somente onCreate, como o TS pediu)
+              <EmptyState onCreate={handleCreate} />
+            )
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filtered.map((g) => (
                 <GroupCard
                   key={g.id}
-                  group={g}
-                  onRefresh={loadGroups}
+                  g={g}
+                  ownerEmail={ownerEmail}
+                  onEdit={() => handleEdit(g)}
+                  onDelete={() => handleDelete(g)}
                 />
               ))}
             </div>
