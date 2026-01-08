@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Search, X } from "lucide-react";
-import GroupCard from "./components/GroupCard";
-import EmptyState from "./components/EmptyState";
+import { GroupCard } from "./components/GroupCard";
+import { EmptyState } from "./components/EmptyState";
 
 type Group = {
   id: string;
