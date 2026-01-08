@@ -2,16 +2,26 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Search, X } from "lucide-react";
+
 import { GroupCard } from "./components/GroupCard";
 import { EmptyState } from "./components/EmptyState";
 
+// ✅ Use o tipo do seu projeto (se existir). Se não existir, você pode voltar pro type local.
+// Tentei manter o mais compatível possível com o que o GroupCard normalmente espera.
 type Group = {
   id: string;
   name: string;
   description?: string | null;
+
+  // campos comuns que podem existir no seu projeto:
   membersCount?: number;
   expensesCount?: number;
   totalAmount?: number;
+
+  // às vezes vem assim do backend:
+  members_count?: number;
+  expenses_count?: number;
+  total_amount?: number;
 };
 
 function SkeletonCard() {
@@ -40,17 +50,24 @@ export default function GroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [ownerEmail, setOwnerEmail] = useState<string>("");
 
-  // 🔧 Se você tem auth no projeto, troque aqui pra pegar o email real do usuário logado
-  const ownerEmail = ""; // ex: session?.user?.email ?? ""
+  // ✅ pega o email salvo no login (você comentou que usa localStorage)
+  useEffect(() => {
+    const email = typeof window !== "undefined" ? localStorage.getItem("acerto_email") : null;
+    setOwnerEmail(email ?? "");
+  }, []);
 
+  // 🔧 mantém seu fetch (se você já tiver outro serviço, pode trocar só aqui)
   async function loadGroups() {
     setLoading(true);
     try {
       const res = await fetch("/api/groups", { cache: "no-store" });
+
       if (res.ok) {
         const data = await res.json();
-        setGroups(Array.isArray(data) ? data : data.groups ?? []);
+        const list = Array.isArray(data) ? data : data.groups ?? [];
+        setGroups(list);
       } else {
         setGroups([]);
       }
@@ -68,27 +85,11 @@ export default function GroupsPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return groups;
-    return groups.filter((g) => g.name.toLowerCase().includes(q));
+    return groups.filter((g) => (g.name ?? "").toLowerCase().includes(q));
   }, [groups, search]);
 
   function handleCreate() {
     alert("Abrir modal de criar grupo (troque aqui pelo seu modal).");
-  }
-
-  function handleEdit(g: Group) {
-    alert(`Editar grupo: ${g.name} (troque aqui pelo seu modal/rota)`);
-  }
-
-  async function handleDelete(g: Group) {
-    const ok = confirm(`Tem certeza que quer deletar o grupo "${g.name}"?`);
-    if (!ok) return;
-
-    // 🔧 Ajuste para sua API real:
-    // await fetch(`/api/groups/${g.id}`, { method: "DELETE" })
-    alert(`Deletar grupo: ${g.name} (implemente a chamada DELETE na sua API)`);
-
-    // Recarrega lista depois (se sua API deletar de verdade)
-    await loadGroups();
   }
 
   return (
@@ -104,8 +105,6 @@ export default function GroupsPage() {
       <div className="sticky top-0 z-20 border-b border-white/10 bg-[#071611]/70 backdrop-blur-xl">
         <div className="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            {/* Se você tiver logo no /public, use assim: */}
-            {/* <img src="/logo.svg" alt="Logo" className="h-9 w-9" /> */}
             <div className="h-9 w-9 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center">
               <span className="text-sm font-semibold">A</span>
             </div>
@@ -175,42 +174,34 @@ export default function GroupsPage() {
               ))}
             </div>
           ) : filtered.length === 0 ? (
-            search.trim().length > 0 ? (
-              // Empty state para busca (sem depender de props do componente)
-              <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
-                <div className="text-lg font-semibold">Nada encontrado</div>
-                <p className="mt-1 text-sm text-white/60">
-                  Nenhum grupo corresponde à sua busca.
-                </p>
-
-                <div className="mt-4 flex flex-col sm:flex-row gap-3">
-                  <button
-                    onClick={() => setSearch("")}
-                    className="rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-4 py-2 text-sm transition"
-                  >
-                    Limpar busca
-                  </button>
-                  <button
-                    onClick={handleCreate}
-                    className="rounded-xl bg-emerald-500/90 hover:bg-emerald-500 text-black font-medium px-4 py-2 text-sm transition"
-                  >
-                    Criar novo grupo
-                  </button>
-                </div>
-              </div>
-            ) : (
-              // EmptyState do seu componente (somente onCreate, como o TS pediu)
-              <EmptyState onCreate={handleCreate} />
-            )
+            // ✅ Mantive o EmptyState simples pra não bater em tipagem diferente
+            <EmptyState onCreate={handleCreate} />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filtered.map((g) => (
                 <GroupCard
                   key={g.id}
+                  // ✅ aqui é o principal: o GroupCard espera "g", não "group"
                   g={g}
-                  ownerEmail={ownerEmail}
-                  onEdit={() => handleEdit(g)}
-                  onDelete={() => handleDelete(g)}
+                  // ✅ ele espera ownerEmail
+                  ownerEmail={ownerEmail || "sem-email@local"}
+                  // ✅ e também callbacks
+                  onEdit={() => {
+                    alert(`Editar grupo: ${g.name} (troque por seu modal/rota)`);
+                  }}
+                  onDelete={async () => {
+                    const ok = confirm(`Tem certeza que deseja excluir "${g.name}"?`);
+                    if (!ok) return;
+
+                    // Se você tiver endpoint delete, faça aqui:
+                    try {
+                      await fetch(`/api/groups/${g.id}`, { method: "DELETE" });
+                    } catch {
+                      // se não existir ainda, só ignora
+                    }
+
+                    await loadGroups();
+                  }}
                 />
               ))}
             </div>
