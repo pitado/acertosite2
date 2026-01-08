@@ -80,15 +80,12 @@ export default function GroupsPage() {
   return (
     <div className="min-h-screen bg-[#0f2a24] text-white p-4 md:p-8">
       <header className="max-w-6xl mx-auto flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <h1 className="flex items-center">
-            <img
-              src="/logo.svg"
-              alt="AcertÔ"
-              className="h-12 w-auto md:h-14 drop-shadow-[0_2px_6px_rgba(0,0,0,.35)]"
-            />
-            <span className="sr-only">AcertÔ</span>
-          </h1>
+        <div className="flex items-center gap-4">
+          <img
+            src="/logo.svg"
+            alt="AcertÔ"
+            className="h-16 w-auto md:h-20 drop-shadow-[0_4px_10px_rgba(0,0,0,.45)]"
+          />
         </div>
 
         <button
@@ -127,12 +124,7 @@ export default function GroupsPage() {
             <Loader2 className="h-6 w-6 mr-2 animate-spin" /> Carregando…
           </div>
         ) : filtered.length === 0 ? (
-          <EmptyState
-            onCreate={() => {
-              setEditing(null);
-              setOpen(true);
-            }}
-          />
+          <EmptyState onCreate={() => setOpen(true)} />
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filtered.map((g) => (
