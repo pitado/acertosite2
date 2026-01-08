@@ -13,13 +13,15 @@ import { Services } from "./services";
 
 export default function GroupsPage() {
   const ownerEmail =
-    typeof window !== "undefined" ? (localStorage.getItem("acerto_email") || "").toLowerCase() : "";
+    typeof window !== "undefined"
+      ? (localStorage.getItem("acerto_email") || "").toLowerCase()
+      : "";
+
   const [search, setSearch] = useState("");
   const [items, setItems] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // modal grupo
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Group | null>(null);
   const [confirm, setConfirm] = useState<{ id: string; name: string } | null>(null);
@@ -83,11 +85,10 @@ export default function GroupsPage() {
             <img
               src="/logo.svg"
               alt="AcertÔ"
-              className="h-10 w-auto md:h-12 drop-shadow-[0_2px_6px_rgba(0,0,0,.35)]"
+              className="h-12 w-auto md:h-14 drop-shadow-[0_2px_6px_rgba(0,0,0,.35)]"
             />
             <span className="sr-only">AcertÔ</span>
           </h1>
-          <span className="sr-only">Grupos</span>
         </div>
 
         <button
