@@ -86,15 +86,11 @@ export default function LoginPage() {
         <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 shadow-[0_0_0_1px_rgba(255,255,255,0.03)]">
           {/* ✅ Porco maior e SEM caixa */}
           <div className="mx-auto mb-4 flex items-center justify-center">
-            <Image
-              src="/logo.svg"
-              alt="Acertô"
-              width={140}
-              height={140}
-              className="h-[120px] w-[120px] object-contain drop-shadow"
-              priority
-            />
-          </div>
+            <img
+  src="/logo.svg"
+  alt="Acertô"
+  className="h-24 w-24 mx-auto mb-2"
+/>
 
           <h1 className="text-center text-2xl font-semibold tracking-tight">
             Bem-vindo ao Acertô
