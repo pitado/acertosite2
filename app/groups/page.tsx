@@ -52,7 +52,6 @@ function safeParseGroups(raw: string | null): Group[] {
   try {
     const data = JSON.parse(raw);
     if (!Array.isArray(data)) return [];
-    // defesa: garante shape mínimo
     return data
       .filter((g) => g && typeof g === "object")
       .map((g: any) => ({
@@ -88,7 +87,6 @@ export default function GroupsPage() {
   const [ownerName, setOwnerName] = useState("");
   const [ownerAvatar, setOwnerAvatar] = useState("");
 
-  // pega dados do "login com Google" que você salva no localStorage
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -118,8 +116,8 @@ export default function GroupsPage() {
   }, [groups, search]);
 
   function createId() {
-    // @ts-expect-error - crypto pode não existir em alguns ambientes
-    const uuid = typeof crypto !== "undefined" && crypto?.randomUUID ? crypto.randomUUID() : "";
+    const uuid =
+      typeof crypto !== "undefined" && crypto?.randomUUID ? crypto.randomUUID() : "";
     return uuid || `g_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
   }
 
@@ -160,7 +158,6 @@ export default function GroupsPage() {
       <div className="sticky top-0 z-20 border-b border-white/10 bg-[#071611]/70 backdrop-blur-xl">
         <div className="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            {/* Avatar do Google / fallback iniciais */}
             <div className="h-10 w-10 rounded-xl overflow-hidden bg-white/10 border border-white/10 flex items-center justify-center">
               {ownerAvatar ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -181,15 +178,13 @@ export default function GroupsPage() {
                 Seus grupos
               </h1>
               <p className="text-xs sm:text-sm text-white/60">
-                Olá,{" "}
-                <span className="text-white/80 font-medium">{displayName}</span>
-                . Crie, busque e gerencie seus grupos.
+                Olá, <span className="text-white/80 font-medium">{displayName}</span>.{" "}
+                Crie, busque e gerencie seus grupos.
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Botão de configurações do perfil */}
             <Link
               href="/profile"
               className="inline-flex items-center justify-center h-10 w-10 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition"
