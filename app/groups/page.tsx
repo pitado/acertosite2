@@ -3,17 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Search, X } from "lucide-react";
 
-import GroupCard from "./components/GroupCard";
+import { GroupCard } from "./components/GroupCard";
 import EmptyState from "./components/EmptyState";
 
-type Group = {
-  id: string;
-  name: string;
-  description?: string | null;
-  membersCount?: number;
-  expensesCount?: number;
-  totalAmount?: number;
-};
+// se existir no seu projeto
+import type { Group } from "./types";
+import { Services } from "./services";
 
 function SkeletonCard() {
   return (
@@ -41,18 +36,36 @@ export default function GroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [ownerEmail, setOwnerEmail] = useState("");
 
-  async function loadGroups() {
+  useEffect(() => {
+    const email =
+      typeof window !== "undefined" ? localStorage.getItem("acerto_email") : null;
+    setOwnerEmail(email ?? "");
+  }, []);
+
+  async function loadGroups(email: string) {
     setLoading(true);
+
     try {
-      const res = await fetch("/api/groups", { cache: "no-store" });
-      if (res.ok) {
-        const data = await res.json();
-        const list = Array.isArray(data) ? data : data.groups ?? [];
-        setGroups(list);
-      } else {
+      // ✅ se ainda não tem email, não chama service (evita erro e evita listGroups(""))
+      if (!email) {
         setGroups([]);
+        return;
       }
+
+      // ✅ AQUI: sempre string (nada de undefined)
+      const list = await Services.listGroups(email);
+
+      const now = new Date().toISOString();
+      const normalized = (list ?? []).map((g: any) => ({
+        ...g,
+        owner_email: g.owner_email ?? email,
+        created_at: g.created_at ?? now,
+        updated_at: g.updated_at ?? now,
+      })) as Group[];
+
+      setGroups(normalized);
     } catch {
       setGroups([]);
     } finally {
@@ -61,8 +74,10 @@ export default function GroupsPage() {
   }
 
   useEffect(() => {
-    loadGroups();
-  }, []);
+    // ✅ só carrega quando tiver o email
+    if (ownerEmail) loadGroups(ownerEmail);
+    else setLoading(false);
+  }, [ownerEmail]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -164,7 +179,24 @@ export default function GroupsPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filtered.map((g) => (
-                <GroupCard key={g.id} group={g} onRefresh={loadGroups} />
+                <GroupCard
+                  key={g.id}
+                  g={g}
+                  ownerEmail={ownerEmail || (g as any).owner_email || "sem-email@local"}
+                  onEdit={() => alert(`Editar grupo: ${g.name}`)}
+                  onDelete={async () => {
+                    const ok = confirm(`Tem certeza que deseja excluir "${g.name}"?`);
+                    if (!ok) return;
+
+                    try {
+                      await Services.deleteGroup?.(g.id);
+                    } catch {
+                      // ignore
+                    }
+
+                    if (ownerEmail) await loadGroups(ownerEmail);
+                  }}
+                />
               ))}
             </div>
           )}
