@@ -1,14 +1,19 @@
 "use client";
-export const dynamic = "force-dynamic";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { Plus, Search, X, UsersRound, Settings } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 
 import GroupCard from "./components/GroupCard";
 import EmptyState from "./components/EmptyState";
-import type { Group } from "./types";
-import Services from "./services";
+
+type Group = {
+  id: string;
+  name: string;
+  description?: string | null;
+  membersCount?: number;
+  expensesCount?: number;
+  totalAmount?: number;
+};
 
 function SkeletonCard() {
   return (
@@ -37,24 +42,29 @@ export default function GroupsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  const [ownerEmail, setOwnerEmail] = useState("");
-  const [userName, setUserName] = useState("");
-  const [userAvatar, setUserAvatar] = useState("");
+  // ✅ dados do usuário (vindos do login Google)
+  const [userName, setUserName] = useState<string>("");
+  const [userAvatar, setUserAvatar] = useState<string>("");
+  const [userEmail, setUserEmail] = useState<string>("");
 
   useEffect(() => {
-    const email = localStorage.getItem("acerto_email") ?? "";
-    const name = localStorage.getItem("acerto_name") ?? "";
-    const avatar = localStorage.getItem("acerto_avatar") ?? "";
-    setOwnerEmail(email);
-    setUserName(name);
-    setUserAvatar(avatar);
+    if (typeof window === "undefined") return;
+
+    setUserName(localStorage.getItem("acerto_name") ?? "");
+    setUserAvatar(localStorage.getItem("acerto_avatar") ?? "");
+    setUserEmail(localStorage.getItem("acerto_email") ?? "");
   }, []);
 
-  async function loadGroups(email: string) {
+  async function loadGroups() {
     setLoading(true);
     try {
-      const list = await Services.listGroups(email);
-      setGroups(list);
+      const res = await fetch("/api/groups", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        setGroups(Array.isArray(data) ? data : data.groups ?? []);
+      } else {
+        setGroups([]);
+      }
     } catch {
       setGroups([]);
     } finally {
@@ -63,9 +73,8 @@ export default function GroupsPage() {
   }
 
   useEffect(() => {
-    if (!ownerEmail) return;
-    loadGroups(ownerEmail);
-  }, [ownerEmail]);
+    loadGroups();
+  }, []);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -76,9 +85,6 @@ export default function GroupsPage() {
   function handleCreate() {
     alert("Abrir modal de criar grupo (troque aqui pelo seu modal).");
   }
-
-  const headerName = userName || (ownerEmail ? ownerEmail.split("@")[0] : "você");
-  const initial = (headerName?.[0] || "A").toUpperCase();
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-[#071611] text-white">
@@ -93,52 +99,47 @@ export default function GroupsPage() {
       <div className="sticky top-0 z-20 border-b border-white/10 bg-[#071611]/70 backdrop-blur-xl">
         <div className="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            {/* Ícone de grupos (mais “app”, menos “IA”) */}
-            <div className="h-10 w-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
-              <UsersRound className="h-5 w-5 text-white/80" />
-            </div>
+            {/* ✅ Avatar / fallback */}
+            {userAvatar ? (
+              <img
+                src={userAvatar}
+                alt={userName ? `Avatar de ${userName}` : "Avatar"}
+                className="h-10 w-10 rounded-xl border border-white/10 object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="h-10 w-10 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center">
+                <span className="text-sm font-semibold">
+                  {(userName?.trim()?.[0] ?? "A").toUpperCase()}
+                </span>
+              </div>
+            )}
 
             <div className="leading-tight">
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg sm:text-xl font-semibold tracking-tight">
-                  Seus grupos
-                </h1>
-              </div>
-
+              {/* ✅ Saudação com nome */}
               <p className="text-xs sm:text-sm text-white/60">
-                Olá, <span className="text-white/80 font-medium">{headerName}</span> — crie, busque e gerencie seus grupos.
+                {userName ? `Olá, ${userName}` : userEmail ? userEmail : "Olá!"}
+              </p>
+
+              <h1 className="text-lg sm:text-xl font-semibold tracking-tight">
+                Seus grupos
+              </h1>
+
+              {/* ✅ tirei o “0 total” (pra ficar mais clean) */}
+              <p className="text-xs sm:text-sm text-white/60">
+                Crie, busque e gerencie seus grupos de forma rápida.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Avatar + Perfil */}
-            <Link
-              href="/profile"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition"
-              title="Perfil"
-            >
-              <div className="h-8 w-8 rounded-xl overflow-hidden border border-white/10 bg-white/10 flex items-center justify-center">
-                {userAvatar ? (
-                  <img src={userAvatar} alt="Avatar" className="h-full w-full object-cover" />
-                ) : (
-                  <span className="text-sm font-semibold">{initial}</span>
-                )}
-              </div>
-
-              <span className="hidden sm:inline text-sm text-white/80">Perfil</span>
-              <Settings className="h-4 w-4 text-white/60 hidden sm:inline" />
-            </Link>
-
-            <button
-              onClick={handleCreate}
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/90 hover:bg-emerald-500 text-black font-medium px-4 py-2 transition"
-            >
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Novo grupo</span>
-              <span className="sm:hidden">Novo</span>
-            </button>
-          </div>
+          <button
+            onClick={handleCreate}
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/90 hover:bg-emerald-500 text-black font-medium px-4 py-2 transition"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Novo grupo</span>
+            <span className="sm:hidden">Novo</span>
+          </button>
         </div>
       </div>
 
@@ -189,18 +190,7 @@ export default function GroupsPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filtered.map((g) => (
-                <GroupCard
-                  key={g.id}
-                  group={{
-                    id: g.id,
-                    name: g.name,
-                    description: g.description ?? null,
-                    membersCount: (g as any).membersCount ?? (g as any).members_count ?? 0,
-                    expensesCount: (g as any).expensesCount ?? (g as any).expenses_count ?? 0,
-                    totalAmount: (g as any).totalAmount ?? (g as any).total_amount ?? 0,
-                  }}
-                  onRefresh={() => loadGroups(ownerEmail)}
-                />
+                <GroupCard key={g.id} group={g} onRefresh={loadGroups} />
               ))}
             </div>
           )}
