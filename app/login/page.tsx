@@ -85,10 +85,11 @@ export default function LoginPage() {
         <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-8">
           {/* 🐷 PORCO MAIOR – SEM CAIXA */}
           <img
-            src="/logo.svg"
-            alt="Acertô"
-            className="h-28 w-28 mx-auto mb-4"
-          />
+  src="/logo.svg"
+  alt="Acertô"
+  className="h-44 w-44 mx-auto mb-4"
+/>
+
 
           <h1 className="text-center text-2xl font-semibold tracking-tight">
             Bem-vindo ao Acertô
