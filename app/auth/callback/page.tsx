@@ -48,8 +48,17 @@ export default function AuthCallback() {
         const name = pickName(meta, email);
         const avatar = pickAvatar(meta);
 
-        if (name) localStorage.setItem("acerto_name", name);
-        if (avatar) localStorage.setItem("acerto_avatar", avatar);
+        // ✅ valores originais do Google (base)
+        if (name) localStorage.setItem("acerto_google_name", name);
+        if (avatar) localStorage.setItem("acerto_google_avatar", avatar);
+
+        // compatibilidade (se você ainda usa em algum lugar)
+        if (name && !localStorage.getItem("acerto_name")) {
+          localStorage.setItem("acerto_name", name);
+        }
+        if (avatar && !localStorage.getItem("acerto_avatar")) {
+          localStorage.setItem("acerto_avatar", avatar);
+        }
       }
 
       router.replace("/groups");
