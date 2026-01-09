@@ -1,62 +1,84 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
-
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Save, ArrowLeft, UserRound } from "lucide-react";
+import { Save, ArrowLeft, UserRound, Upload, Trash2 } from "lucide-react";
 
 export default function ProfilePage() {
   const [name, setName] = useState("");
-  const [avatar, setAvatar] = useState("");
   const [email, setEmail] = useState("");
 
-  const [googleName, setGoogleName] = useState("");
-  const [googleAvatar, setGoogleAvatar] = useState("");
+  // ✅ vamos guardar como base64 (dataURL) no localStorage
+  const [avatarDataUrl, setAvatarDataUrl] = useState<string>("");
+
+  // ✅ opcional: foto do Google salva no login, se você já tiver
+  const [googleAvatar, setGoogleAvatar] = useState<string>("");
+
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    setEmail(localStorage.getItem("acerto_email") ?? "");
+    const e = localStorage.getItem("acerto_email") ?? "";
+    const n = localStorage.getItem("acerto_name") ?? "";
 
-    // ✅ base do google
-    setGoogleName(
-      localStorage.getItem("acerto_google_name") ??
-        localStorage.getItem("acerto_name") ??
-        ""
-    );
-    setGoogleAvatar(
-      localStorage.getItem("acerto_google_avatar") ??
-        localStorage.getItem("acerto_avatar") ??
-        ""
-    );
+    // avatar custom do usuário (upload)
+    const a = localStorage.getItem("acerto_avatar") ?? "";
 
-    // ✅ custom do usuário
-    setName(localStorage.getItem("acerto_name_custom") ?? "");
-    setAvatar(localStorage.getItem("acerto_avatar_custom") ?? "");
+    // foto do Google (se você tiver salvo no login)
+    const g = localStorage.getItem("acerto_google_avatar") ?? "";
+
+    setEmail(e);
+    setName(n);
+    setAvatarDataUrl(a);
+    setGoogleAvatar(g);
   }, []);
 
-  const effectiveName =
-    name.trim() ||
-    googleName.trim() ||
-    (email ? email.split("@")[0] : "A");
-
-  const effectiveAvatar = avatar.trim() || googleAvatar.trim();
-
   const initial = useMemo(() => {
-    const base = effectiveName || (email ? email.split("@")[0] : "A");
+    const base = name || (email ? email.split("@")[0] : "A");
     return (base?.[0] || "A").toUpperCase();
-  }, [effectiveName, email]);
+  }, [name, email]);
+
+  // ✅ decide qual avatar mostrar:
+  // 1) upload custom (acerto_avatar)
+  // 2) google avatar (acerto_google_avatar)
+  // 3) inicial
+  const avatarToShow = avatarDataUrl || googleAvatar;
 
   function save() {
-    const n = name.trim();
-    const a = avatar.trim();
+    if (name.trim()) localStorage.setItem("acerto_name", name.trim());
+    else localStorage.removeItem("acerto_name");
 
-    if (n) localStorage.setItem("acerto_name_custom", n);
-    else localStorage.removeItem("acerto_name_custom");
-
-    if (a) localStorage.setItem("acerto_avatar_custom", a);
-    else localStorage.removeItem("acerto_avatar_custom");
+    if (avatarDataUrl) localStorage.setItem("acerto_avatar", avatarDataUrl);
+    else localStorage.removeItem("acerto_avatar");
 
     alert("Perfil salvo!");
+  }
+
+  function removeAvatar() {
+    setAvatarDataUrl("");
+    localStorage.removeItem("acerto_avatar");
+  }
+
+  async function handleFile(file: File) {
+    if (!file.type.startsWith("image/")) {
+      alert("Envie um arquivo de imagem (PNG, JPG, etc).");
+      return;
+    }
+
+    // ✅ limite simples (ajuda a não explodir o localStorage)
+    // se precisar, podemos comprimir depois
+    const MAX_MB = 2.5;
+    if (file.size > MAX_MB * 1024 * 1024) {
+      alert(`Imagem muito grande. Tente uma com menos de ${MAX_MB}MB.`);
+      return;
+    }
+
+    const dataUrl = await readAsDataURL(file);
+    setAvatarDataUrl(dataUrl);
+  }
+
+  function onPickClick() {
+    fileInputRef.current?.click();
   }
 
   return (
@@ -88,9 +110,10 @@ export default function ProfilePage() {
         <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
           <div className="flex items-center gap-4">
             <div className="h-16 w-16 rounded-2xl overflow-hidden border border-white/10 bg-white/10 flex items-center justify-center">
-              {effectiveAvatar ? (
+              {avatarToShow ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={effectiveAvatar}
+                  src={avatarToShow}
                   alt="Avatar"
                   className="h-full w-full object-cover"
                 />
@@ -104,7 +127,6 @@ export default function ProfilePage() {
               <p className="text-sm text-white/60">
                 Personalize seu nome e avatar.
               </p>
-              {email && <p className="text-xs text-white/40 mt-1">{email}</p>}
             </div>
           </div>
 
@@ -114,30 +136,115 @@ export default function ProfilePage() {
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder={googleName ? `Ex.: ${googleName}` : "Ex.: Pita"}
+                placeholder="Ex.: Pita"
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm outline-none placeholder:text-white/40 focus:border-emerald-400/40 focus:ring-2 focus:ring-emerald-400/10"
               />
-              <div className="text-xs text-white/50">
-                Se deixar vazio, usa seu nome do Google.
-              </div>
+              <p className="text-xs text-white/50">
+                Se deixar vazio, usa o nome do Google (se tiver) ou seu email.
+              </p>
             </label>
 
-            <label className="grid gap-2">
-              <span className="text-sm text-white/70">Avatar (URL da imagem)</span>
-              <input
-                value={avatar}
-                onChange={(e) => setAvatar(e.target.value)}
-                placeholder={googleAvatar ? "Vazio = usar foto do Google" : "https://..."}
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm outline-none placeholder:text-white/40 focus:border-emerald-400/40 focus:ring-2 focus:ring-emerald-400/10"
-              />
-              <div className="text-xs text-white/50 flex items-center gap-2">
-                <UserRound className="h-4 w-4" />
-                Se deixar vazio, usa a foto do Google (se tiver) ou sua inicial.
+            {/* ✅ Upload avatar */}
+            <div className="grid gap-2">
+              <span className="text-sm text-white/70">Avatar</span>
+
+              <div
+                onDragEnter={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setDragOver(true);
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setDragOver(true);
+                }}
+                onDragLeave={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setDragOver(false);
+                }}
+                onDrop={async (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setDragOver(false);
+
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) await handleFile(file);
+                }}
+                className={[
+                  "rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-4",
+                  "flex flex-col gap-3",
+                  dragOver ? "ring-2 ring-emerald-400/30 border-emerald-400/30" : "",
+                ].join(" ")}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-white/80">
+                    <Upload className="h-4 w-4" />
+                    <span className="text-sm">
+                      Arraste uma imagem aqui ou clique para enviar
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={onPickClick}
+                      className="rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 text-sm transition"
+                    >
+                      Escolher arquivo
+                    </button>
+
+                    {avatarDataUrl && (
+                      <button
+                        type="button"
+                        onClick={removeAvatar}
+                        className="rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 text-sm transition inline-flex items-center gap-2"
+                        title="Remover avatar enviado"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Remover
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) await handleFile(file);
+                    // limpa o input pra permitir selecionar o mesmo arquivo de novo
+                    e.currentTarget.value = "";
+                  }}
+                />
+
+                <div className="text-xs text-white/50 flex items-center gap-2">
+                  <UserRound className="h-4 w-4" />
+                  Se não enviar nada, usa a foto do Google (se tiver) ou sua inicial.
+                </div>
               </div>
-            </label>
+            </div>
           </div>
         </div>
+
+        {/* dica: mostrar limite */}
+        <p className="mt-4 text-xs text-white/40">
+          Dica: use uma imagem pequena (ex.: 256x256) pra não pesar no armazenamento.
+        </p>
       </div>
     </div>
   );
+}
+
+function readAsDataURL(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Falha ao ler arquivo"));
+    reader.onload = () => resolve(String(reader.result));
+    reader.readAsDataURL(file);
+  });
 }
