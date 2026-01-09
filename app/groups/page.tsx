@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Search, X } from "lucide-react";
+import Link from "next/link";
+import { Plus, Search, Settings, X } from "lucide-react";
 
 import GroupCard from "./components/GroupCard";
 import EmptyState from "./components/EmptyState";
@@ -37,34 +38,43 @@ function SkeletonCard() {
   );
 }
 
+function initialsFromName(name?: string) {
+  const n = (name || "").trim();
+  if (!n) return "U";
+  const parts = n.split(/\s+/).slice(0, 2);
+  return parts.map((p) => p[0]?.toUpperCase()).join("");
+}
+
 export default function GroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  // ✅ dados do usuário (vindos do login Google)
-  const [userName, setUserName] = useState<string>("");
-  const [userAvatar, setUserAvatar] = useState<string>("");
-  const [userEmail, setUserEmail] = useState<string>("");
+  const [ownerEmail, setOwnerEmail] = useState("");
+  const [ownerName, setOwnerName] = useState("");
+  const [ownerAvatar, setOwnerAvatar] = useState("");
 
+  // pega dados do "login com Google" que você salva no localStorage
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    setUserName(localStorage.getItem("acerto_name") ?? "");
-    setUserAvatar(localStorage.getItem("acerto_avatar") ?? "");
-    setUserEmail(localStorage.getItem("acerto_email") ?? "");
+    setOwnerEmail(localStorage.getItem("acerto_email") ?? "");
+    setOwnerName(localStorage.getItem("acerto_name") ?? "");
+    setOwnerAvatar(localStorage.getItem("acerto_avatar") ?? "");
   }, []);
 
   async function loadGroups() {
     setLoading(true);
     try {
       const res = await fetch("/api/groups", { cache: "no-store" });
-      if (res.ok) {
-        const data = await res.json();
-        setGroups(Array.isArray(data) ? data : data.groups ?? []);
-      } else {
+      if (!res.ok) {
         setGroups([]);
+        return;
       }
+
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : data.groups ?? [];
+      setGroups(list);
     } catch {
       setGroups([]);
     } finally {
@@ -86,6 +96,8 @@ export default function GroupsPage() {
     alert("Abrir modal de criar grupo (troque aqui pelo seu modal).");
   }
 
+  const displayName = ownerName || (ownerEmail ? ownerEmail.split("@")[0] : "Você");
+
   return (
     <div className="min-h-screen relative overflow-hidden bg-[#071611] text-white">
       {/* Background glow */}
@@ -99,47 +111,52 @@ export default function GroupsPage() {
       <div className="sticky top-0 z-20 border-b border-white/10 bg-[#071611]/70 backdrop-blur-xl">
         <div className="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            {/* ✅ Avatar / fallback */}
-            {userAvatar ? (
-              <img
-                src={userAvatar}
-                alt={userName ? `Avatar de ${userName}` : "Avatar"}
-                className="h-10 w-10 rounded-xl border border-white/10 object-cover"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <div className="h-10 w-10 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center">
+            {/* Avatar do Google / fallback iniciais */}
+            <div className="h-10 w-10 rounded-xl overflow-hidden bg-white/10 border border-white/10 flex items-center justify-center">
+              {ownerAvatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={ownerAvatar}
+                  alt="Foto do perfil"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
                 <span className="text-sm font-semibold">
-                  {(userName?.trim()?.[0] ?? "A").toUpperCase()}
+                  {initialsFromName(ownerName || ownerEmail)}
                 </span>
-              </div>
-            )}
+              )}
+            </div>
 
             <div className="leading-tight">
-              {/* ✅ Saudação com nome */}
-              <p className="text-xs sm:text-sm text-white/60">
-                {userName ? `Olá, ${userName}` : userEmail ? userEmail : "Olá!"}
-              </p>
-
               <h1 className="text-lg sm:text-xl font-semibold tracking-tight">
                 Seus grupos
               </h1>
-
-              {/* ✅ tirei o “0 total” (pra ficar mais clean) */}
               <p className="text-xs sm:text-sm text-white/60">
-                Crie, busque e gerencie seus grupos de forma rápida.
+                Olá, <span className="text-white/80 font-medium">{displayName}</span>. Crie, busque e gerencie seus grupos.
               </p>
             </div>
           </div>
 
-          <button
-            onClick={handleCreate}
-            className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/90 hover:bg-emerald-500 text-black font-medium px-4 py-2 transition"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Novo grupo</span>
-            <span className="sm:hidden">Novo</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Botão de configurações do perfil */}
+            <Link
+              href="/profile"
+              className="inline-flex items-center justify-center h-10 w-10 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition"
+              aria-label="Configurar perfil"
+              title="Configurar perfil"
+            >
+              <Settings className="h-5 w-5 text-white/80" />
+            </Link>
+
+            <button
+              onClick={handleCreate}
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/90 hover:bg-emerald-500 text-black font-medium px-4 py-2 transition"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Novo grupo</span>
+              <span className="sm:hidden">Novo</span>
+            </button>
+          </div>
         </div>
       </div>
 
