@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 
@@ -22,7 +21,7 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
       />
       <path
         fill="#1976D2"
-        d="M43.611 20.083H42V20H24v8h11.303c-.765 2.164-2.222 4.004-4.089 5.565l.003-.002 6.19 5.238C36.97 39.205 44 34 44 24c0-1.341-.138-2.651-.389-3.917z"
+        d="M43.611 20.083H42V20H24v8h11.303c-.765 2.164-2.222 4.004-4.089 5.565l6.19 5.238C36.97 39.205 44 34 44 24c0-1.341-.138-2.651-.389-3.917z"
       />
     </svg>
   );
@@ -33,10 +32,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // Se já tem email salvo, manda direto pros grupos
   useEffect(() => {
     const email =
-      typeof window !== "undefined" ? localStorage.getItem("acerto_email") : null;
+      typeof window !== "undefined"
+        ? localStorage.getItem("acerto_email")
+        : null;
     if (email) router.replace("/groups");
   }, [router]);
 
@@ -69,7 +69,6 @@ export default function LoginPage() {
       return;
     }
 
-    // Normalmente redireciona sozinho
     setLoading(false);
   }
 
@@ -83,18 +82,18 @@ export default function LoginPage() {
       </div>
 
       <div className="relative w-full max-w-md">
-        <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 shadow-[0_0_0_1px_rgba(255,255,255,0.03)]">
-          {/* ✅ Porco maior e SEM caixa */}
-          <div className="mx-auto mb-4 flex items-center justify-center">
-            <img
-  src="/logo.svg"
-  alt="Acertô"
-  className="h-24 w-24 mx-auto mb-2"
-/>
+        <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-8">
+          {/* 🐷 PORCO MAIOR – SEM CAIXA */}
+          <img
+            src="/logo.svg"
+            alt="Acertô"
+            className="h-28 w-28 mx-auto mb-4"
+          />
 
           <h1 className="text-center text-2xl font-semibold tracking-tight">
             Bem-vindo ao Acertô
           </h1>
+
           <p className="mt-1 text-center text-sm text-white/60">
             A dívida vai, a amizade fica.
           </p>
@@ -102,7 +101,7 @@ export default function LoginPage() {
           <button
             onClick={handleGoogle}
             disabled={loading}
-            className="mt-6 w-full inline-flex items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-4 py-3 transition disabled:opacity-60 disabled:cursor-not-allowed"
+            className="mt-6 w-full inline-flex items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-4 py-3 transition disabled:opacity-60"
           >
             <GoogleIcon className="h-5 w-5" />
             <span className="font-medium">
@@ -110,20 +109,13 @@ export default function LoginPage() {
             </span>
           </button>
 
-          <p className="mt-5 text-center text-xs text-white/50 leading-relaxed">
+          <p className="mt-5 text-center text-xs text-white/50">
             Entre com sua conta Google para criar grupos, dividir despesas e acompanhar seus acertos.
           </p>
 
           {err && (
             <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
               {err}
-              <div className="mt-2 text-xs text-red-200/80">
-                Dica: no Supabase (Auth → URL Configuration), adicione a URL de redirect:
-                <br />
-                <span className="text-red-100/90">
-                  {`https://SEU-DOMINIO/auth/callback`}
-                </span>
-              </div>
             </div>
           )}
         </div>
