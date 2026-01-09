@@ -16,6 +16,8 @@ type Group = {
   totalAmount?: number;
 };
 
+const LS_GROUPS_KEY = "acerto_groups";
+
 function SkeletonCard() {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-5 animate-pulse">
@@ -45,6 +47,38 @@ function initialsFromName(name?: string) {
   return parts.map((p) => p[0]?.toUpperCase()).join("");
 }
 
+function safeParseGroups(raw: string | null): Group[] {
+  if (!raw) return [];
+  try {
+    const data = JSON.parse(raw);
+    if (!Array.isArray(data)) return [];
+    // defesa: garante shape mínimo
+    return data
+      .filter((g) => g && typeof g === "object")
+      .map((g: any) => ({
+        id: String(g.id ?? ""),
+        name: String(g.name ?? ""),
+        description: g.description ?? null,
+        membersCount: typeof g.membersCount === "number" ? g.membersCount : 0,
+        expensesCount: typeof g.expensesCount === "number" ? g.expensesCount : 0,
+        totalAmount: typeof g.totalAmount === "number" ? g.totalAmount : 0,
+      }))
+      .filter((g) => g.id && g.name);
+  } catch {
+    return [];
+  }
+}
+
+function getLocalGroups(): Group[] {
+  if (typeof window === "undefined") return [];
+  return safeParseGroups(localStorage.getItem(LS_GROUPS_KEY));
+}
+
+function setLocalGroups(list: Group[]) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(LS_GROUPS_KEY, JSON.stringify(list));
+}
+
 export default function GroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,17 +100,8 @@ export default function GroupsPage() {
   async function loadGroups() {
     setLoading(true);
     try {
-      const res = await fetch("/api/groups", { cache: "no-store" });
-      if (!res.ok) {
-        setGroups([]);
-        return;
-      }
-
-      const data = await res.json();
-      const list = Array.isArray(data) ? data : data.groups ?? [];
+      const list = getLocalGroups();
       setGroups(list);
-    } catch {
-      setGroups([]);
     } finally {
       setLoading(false);
     }
@@ -92,8 +117,32 @@ export default function GroupsPage() {
     return groups.filter((g) => (g.name ?? "").toLowerCase().includes(q));
   }, [groups, search]);
 
+  function createId() {
+    // @ts-expect-error - crypto pode não existir em alguns ambientes
+    const uuid = typeof crypto !== "undefined" && crypto?.randomUUID ? crypto.randomUUID() : "";
+    return uuid || `g_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+  }
+
   function handleCreate() {
-    alert("Abrir modal de criar grupo (troque aqui pelo seu modal).");
+    if (typeof window === "undefined") return;
+
+    const name = prompt("Nome do grupo:");
+    if (!name || !name.trim()) return;
+
+    const description = prompt("Descrição (opcional):") ?? "";
+
+    const newGroup: Group = {
+      id: createId(),
+      name: name.trim(),
+      description: description.trim() ? description.trim() : null,
+      membersCount: 1,
+      expensesCount: 0,
+      totalAmount: 0,
+    };
+
+    const next = [newGroup, ...getLocalGroups()];
+    setLocalGroups(next);
+    setGroups(next);
   }
 
   const displayName = ownerName || (ownerEmail ? ownerEmail.split("@")[0] : "Você");
@@ -132,7 +181,9 @@ export default function GroupsPage() {
                 Seus grupos
               </h1>
               <p className="text-xs sm:text-sm text-white/60">
-                Olá, <span className="text-white/80 font-medium">{displayName}</span>. Crie, busque e gerencie seus grupos.
+                Olá,{" "}
+                <span className="text-white/80 font-medium">{displayName}</span>
+                . Crie, busque e gerencie seus grupos.
               </p>
             </div>
           </div>
