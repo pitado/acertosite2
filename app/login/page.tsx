@@ -43,8 +43,17 @@ export default function LoginPage() {
         const name = pickName(meta, email);
         const avatar = pickAvatar(meta);
 
-        if (name) localStorage.setItem("acerto_name", name);
-        if (avatar) localStorage.setItem("acerto_avatar", avatar);
+        // ✅ valores originais do Google (base)
+        if (name) localStorage.setItem("acerto_google_name", name);
+        if (avatar) localStorage.setItem("acerto_google_avatar", avatar);
+
+        // (compatibilidade com o que você já tinha antes)
+        if (name && !localStorage.getItem("acerto_name")) {
+          localStorage.setItem("acerto_name", name);
+        }
+        if (avatar && !localStorage.getItem("acerto_avatar")) {
+          localStorage.setItem("acerto_avatar", avatar);
+        }
 
         router.replace("/groups");
       }
@@ -57,6 +66,7 @@ export default function LoginPage() {
       setAuthError("Configuração do Supabase não encontrada.");
       return;
     }
+
     const redirectTo = `${window.location.origin}/auth/callback`;
     await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -102,11 +112,14 @@ export default function LoginPage() {
         </button>
 
         {authError && (
-          <div className="mt-4 text-xs text-red-200 text-center">{authError}</div>
+          <div className="mt-4 text-xs text-red-200 text-center">
+            {authError}
+          </div>
         )}
 
         <div className="mt-6 text-xs text-emerald-100/60 text-center">
-          Entre com sua conta Google para criar grupos, dividir despesas e acompanhar os acertos.
+          Entre com sua conta Google para criar grupos, dividir despesas e acompanhar
+          os acertos.
         </div>
       </div>
 
