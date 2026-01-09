@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Settings, X } from "lucide-react";
+import { Plus, Search, X, Settings } from "lucide-react";
 
 import GroupCard from "./components/GroupCard";
 import EmptyState from "./components/EmptyState";
+import Modal from "./components/Modal";
 
 type Group = {
   id: string;
@@ -16,7 +17,25 @@ type Group = {
   totalAmount?: number;
 };
 
-const LS_GROUPS_KEY = "acerto_groups";
+const LS_GROUPS_KEY = "acerto_groups_v1";
+
+function safeJsonParse<T>(value: string | null, fallback: T): T {
+  if (!value) return fallback;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function createId() {
+  const uuid =
+    typeof window !== "undefined" &&
+    typeof window.crypto?.randomUUID === "function"
+      ? window.crypto.randomUUID()
+      : "";
+  return uuid || `g_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+}
 
 function SkeletonCard() {
   return (
@@ -40,72 +59,49 @@ function SkeletonCard() {
   );
 }
 
-function initialsFromName(name?: string) {
-  const n = (name || "").trim();
-  if (!n) return "U";
-  const parts = n.split(/\s+/).slice(0, 2);
-  return parts.map((p) => p[0]?.toUpperCase()).join("");
-}
-
-function safeParseGroups(raw: string | null): Group[] {
-  if (!raw) return [];
-  try {
-    const data = JSON.parse(raw);
-    if (!Array.isArray(data)) return [];
-    return data
-      .filter((g) => g && typeof g === "object")
-      .map((g: any) => ({
-        id: String(g.id ?? ""),
-        name: String(g.name ?? ""),
-        description: g.description ?? null,
-        membersCount: typeof g.membersCount === "number" ? g.membersCount : 0,
-        expensesCount: typeof g.expensesCount === "number" ? g.expensesCount : 0,
-        totalAmount: typeof g.totalAmount === "number" ? g.totalAmount : 0,
-      }))
-      .filter((g) => g.id && g.name);
-  } catch {
-    return [];
-  }
-}
-
-function getLocalGroups(): Group[] {
-  if (typeof window === "undefined") return [];
-  return safeParseGroups(localStorage.getItem(LS_GROUPS_KEY));
-}
-
-function setLocalGroups(list: Group[]) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(LS_GROUPS_KEY, JSON.stringify(list));
-}
-
 export default function GroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  const [ownerEmail, setOwnerEmail] = useState("");
-  const [ownerName, setOwnerName] = useState("");
-  const [ownerAvatar, setOwnerAvatar] = useState("");
+  // Perfil (pra mostrar “Olá, Nome”)
+  const [name, setName] = useState("");
+  const [avatar, setAvatar] = useState("");
+  const [email, setEmail] = useState("");
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+  // Modal criar grupo
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+  const [createError, setCreateError] = useState<string>("");
 
-    setOwnerEmail(localStorage.getItem("acerto_email") ?? "");
-    setOwnerName(localStorage.getItem("acerto_name") ?? "");
-    setOwnerAvatar(localStorage.getItem("acerto_avatar") ?? "");
-  }, []);
+  const initial = useMemo(() => {
+    const base = name || (email ? email.split("@")[0] : "A");
+    return (base?.[0] || "A").toUpperCase();
+  }, [name, email]);
 
-  async function loadGroups() {
+  function loadGroups() {
     setLoading(true);
-    try {
-      const list = getLocalGroups();
-      setGroups(list);
-    } finally {
-      setLoading(false);
-    }
+    const list = safeJsonParse<Group[]>(
+      typeof window !== "undefined" ? localStorage.getItem(LS_GROUPS_KEY) : null,
+      []
+    );
+    setGroups(Array.isArray(list) ? list : []);
+    setLoading(false);
+  }
+
+  function saveGroups(next: Group[]) {
+    setGroups(next);
+    localStorage.setItem(LS_GROUPS_KEY, JSON.stringify(next));
   }
 
   useEffect(() => {
+    // perfil
+    setEmail(localStorage.getItem("acerto_email") ?? "");
+    setName(localStorage.getItem("acerto_name") ?? "");
+    setAvatar(localStorage.getItem("acerto_avatar") ?? "");
+
+    // grupos
     loadGroups();
   }, []);
 
@@ -115,35 +111,39 @@ export default function GroupsPage() {
     return groups.filter((g) => (g.name ?? "").toLowerCase().includes(q));
   }, [groups, search]);
 
-  function createId() {
-    const uuid =
-      typeof crypto !== "undefined" && crypto?.randomUUID ? crypto.randomUUID() : "";
-    return uuid || `g_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+  function openCreate() {
+    setCreateError("");
+    setNewName("");
+    setNewDesc("");
+    setCreateOpen(true);
   }
 
-  function handleCreate() {
-    if (typeof window === "undefined") return;
+  function createGroup() {
+    const n = newName.trim();
+    const d = newDesc.trim();
 
-    const name = prompt("Nome do grupo:");
-    if (!name || !name.trim()) return;
+    if (!n) {
+      setCreateError("Digite um nome para o grupo.");
+      return;
+    }
+    if (n.length < 2) {
+      setCreateError("O nome do grupo precisa ter pelo menos 2 caracteres.");
+      return;
+    }
 
-    const description = prompt("Descrição (opcional):") ?? "";
-
-    const newGroup: Group = {
+    const group: Group = {
       id: createId(),
-      name: name.trim(),
-      description: description.trim() ? description.trim() : null,
+      name: n,
+      description: d || null,
       membersCount: 1,
       expensesCount: 0,
       totalAmount: 0,
     };
 
-    const next = [newGroup, ...getLocalGroups()];
-    setLocalGroups(next);
-    setGroups(next);
+    const next = [group, ...groups];
+    saveGroups(next);
+    setCreateOpen(false);
   }
-
-  const displayName = ownerName || (ownerEmail ? ownerEmail.split("@")[0] : "Você");
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-[#071611] text-white">
@@ -158,28 +158,24 @@ export default function GroupsPage() {
       <div className="sticky top-0 z-20 border-b border-white/10 bg-[#071611]/70 backdrop-blur-xl">
         <div className="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl overflow-hidden bg-white/10 border border-white/10 flex items-center justify-center">
-              {ownerAvatar ? (
+            <div className="h-9 w-9 rounded-xl overflow-hidden border border-white/10 bg-white/10 flex items-center justify-center">
+              {avatar ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={ownerAvatar}
-                  alt="Foto do perfil"
-                  className="h-full w-full object-cover"
-                />
+                <img src={avatar} alt="Avatar" className="h-full w-full object-cover" />
               ) : (
-                <span className="text-sm font-semibold">
-                  {initialsFromName(ownerName || ownerEmail)}
-                </span>
+                <span className="text-sm font-semibold">{initial}</span>
               )}
             </div>
 
             <div className="leading-tight">
-              <h1 className="text-lg sm:text-xl font-semibold tracking-tight">
-                Seus grupos
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg sm:text-xl font-semibold tracking-tight">
+                  Seus grupos
+                </h1>
+              </div>
               <p className="text-xs sm:text-sm text-white/60">
-                Olá, <span className="text-white/80 font-medium">{displayName}</span>.{" "}
-                Crie, busque e gerencie seus grupos.
+                Olá, <span className="text-white/80 font-medium">{name || "Miguel"}</span>. Crie,
+                busque e gerencie seus grupos.
               </p>
             </div>
           </div>
@@ -187,15 +183,15 @@ export default function GroupsPage() {
           <div className="flex items-center gap-2">
             <Link
               href="/profile"
-              className="inline-flex items-center justify-center h-10 w-10 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition"
-              aria-label="Configurar perfil"
-              title="Configurar perfil"
+              className="h-10 w-10 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center transition"
+              aria-label="Configurações do perfil"
+              title="Perfil"
             >
               <Settings className="h-5 w-5 text-white/80" />
             </Link>
 
             <button
-              onClick={handleCreate}
+              onClick={openCreate}
               className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/90 hover:bg-emerald-500 text-black font-medium px-4 py-2 transition"
             >
               <Plus className="h-4 w-4" />
@@ -245,20 +241,76 @@ export default function GroupsPage() {
               ))}
             </div>
           ) : filtered.length === 0 ? (
-            <EmptyState
-              hasSearch={search.trim().length > 0}
-              onCreate={handleCreate}
-              onClearSearch={() => setSearch("")}
-            />
+            <EmptyState onCreate={openCreate} />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filtered.map((g) => (
-                <GroupCard key={g.id} group={g} onRefresh={loadGroups} />
+                <GroupCard
+                  key={g.id}
+                  group={g}
+                  onRefresh={loadGroups}
+                />
               ))}
             </div>
           )}
         </div>
       </div>
+
+      {/* Modal: Criar grupo */}
+      <Modal
+        open={createOpen}
+        title="Criar novo grupo"
+        description="Dê um nome e (se quiser) uma descrição. Depois você convida as pessoas."
+        onClose={() => setCreateOpen(false)}
+        footer={
+          <div className="flex items-center justify-end gap-2">
+            <button
+              onClick={() => setCreateOpen(false)}
+              className="rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-4 py-2 text-sm transition"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={createGroup}
+              className="rounded-xl bg-emerald-500/90 hover:bg-emerald-500 text-black font-medium px-4 py-2 text-sm transition"
+            >
+              Criar
+            </button>
+          </div>
+        }
+      >
+        <div className="grid gap-4">
+          <label className="grid gap-2">
+            <span className="text-sm text-white/70">Nome do grupo</span>
+            <input
+              value={newName}
+              onChange={(e) => {
+                setNewName(e.target.value);
+                setCreateError("");
+              }}
+              placeholder="Ex.: República do AP 12"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm outline-none placeholder:text-white/40 focus:border-emerald-400/40 focus:ring-2 focus:ring-emerald-400/10"
+            />
+          </label>
+
+          <label className="grid gap-2">
+            <span className="text-sm text-white/70">Descrição (opcional)</span>
+            <textarea
+              value={newDesc}
+              onChange={(e) => setNewDesc(e.target.value)}
+              placeholder="Ex.: Grupo para dividir aluguel, luz e mercado."
+              rows={3}
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm outline-none placeholder:text-white/40 focus:border-emerald-400/40 focus:ring-2 focus:ring-emerald-400/10 resize-none"
+            />
+          </label>
+
+          {createError ? (
+            <div className="text-sm text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
+              {createError}
+            </div>
+          ) : null}
+        </div>
+      </Modal>
     </div>
   );
 }
