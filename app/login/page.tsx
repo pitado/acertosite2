@@ -5,6 +5,21 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 
+function pickName(meta: any, email?: string | null) {
+  return (
+    meta?.full_name ||
+    meta?.name ||
+    meta?.preferred_username ||
+    meta?.user_name ||
+    (email ? email.split("@")[0] : "") ||
+    ""
+  );
+}
+
+function pickAvatar(meta: any) {
+  return meta?.avatar_url || meta?.picture || meta?.avatar || "";
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [authError, setAuthError] = useState<string | null>(null);
@@ -16,10 +31,21 @@ export default function LoginPage() {
         setAuthError("Configuração do Supabase não encontrada.");
         return;
       }
+
       const { data } = await supabase.auth.getSession();
-      const email = data.session?.user?.email;
+      const user = data.session?.user;
+
+      const email = user?.email ?? null;
       if (email) {
         localStorage.setItem("acerto_email", email);
+
+        const meta = user?.user_metadata ?? {};
+        const name = pickName(meta, email);
+        const avatar = pickAvatar(meta);
+
+        if (name) localStorage.setItem("acerto_name", name);
+        if (avatar) localStorage.setItem("acerto_avatar", avatar);
+
         router.replace("/groups");
       }
     })();
@@ -76,9 +102,7 @@ export default function LoginPage() {
         </button>
 
         {authError && (
-          <div className="mt-4 text-xs text-red-200 text-center">
-            {authError}
-          </div>
+          <div className="mt-4 text-xs text-red-200 text-center">{authError}</div>
         )}
 
         <div className="mt-6 text-xs text-emerald-100/60 text-center">
