@@ -1,27 +1,23 @@
 "use client";
 
-import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import Image from "next/image";
 
 export default function LoginPage() {
-  const [loading, setLoading] = useState(false);
+  const supabase = createClientComponentClient();
 
-  function handleLogin() {
-    if (loading) return;
-    setLoading(true);
-
-    // 🔧 aqui você mantém sua lógica real de login com Google
-    // isso é só um delay visual pra UX ficar bonita
-    setTimeout(() => {
-      // exemplo:
-      // window.location.href = "/groups";
-      setLoading(false);
-    }, 1500);
+  async function handleGoogleLogin() {
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${location.origin}/groups`,
+      },
+    });
   }
 
   return (
-    <div className="min-h-screen bg-[#071611] text-white flex items-center justify-center relative overflow-hidden">
-      {/* Background glow */}
+    <div className="min-h-screen flex items-center justify-center bg-[#071611] relative overflow-hidden text-white">
+      {/* Glow background */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-40 -left-40 h-[420px] w-[420px] rounded-full bg-emerald-500/10 blur-3xl" />
         <div className="absolute top-32 -right-40 h-[520px] w-[520px] rounded-full bg-teal-400/10 blur-3xl" />
@@ -29,54 +25,42 @@ export default function LoginPage() {
       </div>
 
       {/* Card */}
-      <div className="relative w-full max-w-md mx-4 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 animate-in fade-in zoom-in duration-500">
-        {/* Logo */}
-        <div className="flex justify-center mb-6">
-          <img
+      <div className="relative z-10 w-full max-w-md rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl px-8 py-10 text-center">
+        {/* Logo maior */}
+        <div className="mx-auto mb-6 h-20 w-20 flex items-center justify-center rounded-2xl bg-emerald-500/10">
+          <Image
             src="/logo.svg"
             alt="Acertô"
-            className="h-20 w-20"
+            width={56}
+            height={56}
+            priority
           />
         </div>
 
-        {/* Title */}
-        <h1 className="text-center text-2xl font-semibold tracking-tight">
+        <h1 className="text-2xl font-semibold tracking-tight">
           Bem-vindo ao Acertô
         </h1>
-
-        <p className="mt-2 text-center text-sm text-white/60">
+        <p className="mt-1 text-sm text-white/60">
           A dívida vai, a amizade fica.
         </p>
 
-        {/* Button */}
+        {/* Botão Google REAL */}
         <button
-          onClick={handleLogin}
-          disabled={loading}
-          className="mt-8 w-full inline-flex items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/10 hover:bg-white/15 transition px-4 py-3 font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+          onClick={handleGoogleLogin}
+          className="mt-8 w-full flex items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/10 hover:bg-white/15 transition px-4 py-3 font-medium"
         >
-          {loading ? (
-            <>
-              <Loader2 className="h-5 w-5 animate-spin" />
-              Conectando…
-            </>
-          ) : (
-            <>
-              <img
-                src="/google.svg"
-                alt="Google"
-                className="h-5 w-5"
-              />
-              Continuar com Google
-            </>
-          )}
+          <Image
+            src="/google.svg"
+            alt="Google"
+            width={18}
+            height={18}
+          />
+          Continuar com Google
         </button>
 
-       
-
-        {/* Helper */}
-        <p className="mt-6 text-center text-xs text-white/40 leading-relaxed">
-          Entre com sua conta Google para criar grupos, dividir despesas
-          e acompanhar seus acertos.
+        <p className="mt-4 text-xs text-white/40">
+          Entre com sua conta Google para criar grupos, dividir despesas e
+          acompanhar seus acertos.
         </p>
       </div>
     </div>
