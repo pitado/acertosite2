@@ -10,6 +10,7 @@ import {
   Settings,
   ChevronRight,
   Sparkles,
+  BarChart3,
 } from "lucide-react";
 
 type Group = {
@@ -46,7 +47,6 @@ export default function GroupsPage() {
   }
 
   function createId() {
-    // evita warnings/ts directives e funciona em qualquer browser
     if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
       return crypto.randomUUID();
     }
@@ -76,8 +76,8 @@ export default function GroupsPage() {
         <div className="absolute bottom-[-220px] left-1/3 h-[620px] w-[620px] rounded-full bg-green-500/10 blur-3xl" />
       </div>
 
-      {/* HEADER */}
-      <header className="relative z-10 border-b border-white/10 bg-[#071611]/70 backdrop-blur-xl">
+      {/* HEADER (✅ AGORA STICKY pra não sumir) */}
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-[#071611]/70 backdrop-blur-xl">
         <div className="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="h-10 w-10 rounded-xl overflow-hidden bg-white/10 flex items-center justify-center shrink-0">
@@ -95,7 +95,27 @@ export default function GroupsPage() {
             </div>
 
             <div className="min-w-0">
-              <h1 className="text-lg font-semibold truncate">Seus grupos</h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-lg font-semibold truncate">Seus grupos</h1>
+
+                {/* ✅ “Aba”/atalho no topo */}
+                <nav className="hidden sm:flex items-center gap-2 text-sm">
+                  <span className="text-white/30">|</span>
+                  <Link
+                    href="/groups"
+                    className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-white"
+                  >
+                    Grupos
+                  </Link>
+                  <Link
+                    href="/reports"
+                    className="px-2 py-1 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 text-white/70 hover:text-white transition"
+                  >
+                    Relatórios
+                  </Link>
+                </nav>
+              </div>
+
               <p className="text-sm text-white/60 truncate">
                 Crie, gerencie e organize seus grupos.
               </p>
@@ -103,6 +123,15 @@ export default function GroupsPage() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            <Link
+              href="/reports"
+              className="hidden sm:inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition text-sm"
+              title="Relatórios"
+            >
+              <BarChart3 className="h-4 w-4" />
+              Relatórios
+            </Link>
+
             <Link
               href="/profile"
               className="h-10 w-10 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center transition"
@@ -190,9 +219,7 @@ export default function GroupsPage() {
           <>
             {/* RESUMOS */}
             <section className="space-y-3">
-              <h3 className="text-sm font-medium text-white/70">
-                Resumo do mês
-              </h3>
+              <h3 className="text-sm font-medium text-white/70">Resumo do mês</h3>
 
               <div className="grid md:grid-cols-4 gap-4">
                 <Summary title="Total este mês" value="R$ 0,00" />
@@ -245,18 +272,28 @@ export default function GroupsPage() {
                       subtitle="Lance gastos e categorize"
                       onClick={() => alert("Em breve: adicionar despesas")}
                     />
-                    <QuickAction
-                      icon={<AlertCircle className="h-5 w-5" />}
-                      title="Ver relatórios"
-                      subtitle="Acompanhe quem deve e quem recebe"
-                      onClick={() => alert("Em breve: relatórios")}
-                    />
+                    {/* ✅ Agora vai pra página de relatórios */}
+                    <Link
+                      href="/reports"
+                      className="text-left rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition p-4 block"
+                    >
+                      <div className="text-emerald-300">
+                        <BarChart3 className="h-5 w-5" />
+                      </div>
+                      <div className="mt-3 font-semibold">Ver relatórios</div>
+                      <div className="mt-1 text-xs text-white/60">
+                        Acompanhe quem deve e quem recebe
+                      </div>
+                    </Link>
                   </div>
                 </div>
               </div>
 
-              {/* COLUNA DIREITA: GRUPOS BEM VISÍVEL */}
-              <div ref={groupsRef} className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
+              {/* COLUNA DIREITA: GRUPOS */}
+              <div
+                ref={groupsRef}
+                className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6"
+              >
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="text-lg font-semibold">Meus grupos</h3>
                   <button
@@ -298,7 +335,9 @@ export default function GroupsPage() {
                       <div className="mt-3 flex gap-2">
                         <button
                           className="flex-1 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 py-2 text-sm transition"
-                          onClick={() => alert("Convidar (vamos ligar certinho quando tiver banco)")}
+                          onClick={() =>
+                            alert("Convidar (vamos ligar certinho quando tiver banco)")
+                          }
                         >
                           Convidar
                         </button>
@@ -314,7 +353,8 @@ export default function GroupsPage() {
                 </div>
 
                 <div className="mt-4 text-xs text-white/40">
-                  Dica: quando a gente ligar o banco, dá pra mostrar “pendentes”, “última atividade” e “saldo do grupo” aqui.
+                  Dica: quando a gente ligar o banco, dá pra mostrar “pendentes”,
+                  “última atividade” e “saldo do grupo” aqui.
                 </div>
               </div>
             </section>
@@ -334,13 +374,7 @@ function Summary({ title, value }: { title: string; value: string }) {
   );
 }
 
-function Step({
-  icon,
-  text,
-}: {
-  icon: React.ReactNode;
-  text: string;
-}) {
+function Step({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-4 flex flex-col items-center gap-2 text-center">
       <div className="text-emerald-400">{icon}</div>
