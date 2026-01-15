@@ -1,82 +1,71 @@
 "use client";
-export const dynamic = "force-dynamic";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 
-function pickName(meta: any, email?: string | null) {
-  return (
-    meta?.full_name ||
-    meta?.name ||
-    meta?.preferred_username ||
-    meta?.user_name ||
-    (email ? email.split("@")[0] : "") ||
-    ""
-  );
-}
-
-function pickAvatar(meta: any) {
-  return meta?.avatar_url || meta?.picture || meta?.avatar || "";
-}
-
-export default function AuthCallback() {
+export default function AuthCallbackPage() {
   const router = useRouter();
+  const [msg, setMsg] = useState("Finalizando login...");
 
   useEffect(() => {
-    (async () => {
-      const supabase = getSupabaseClient();
-      if (!supabase) {
-        router.replace("/login");
-        return;
-      }
-
+    async function run() {
       try {
-        await supabase.auth.exchangeCodeForSession(window.location.href);
-      } catch {
-        // se já tiver sessão, segue
-      }
-
-      const { data } = await supabase.auth.getSession();
-      const user = data.session?.user;
-
-      const email = user?.email ?? null;
-      if (email) {
-        localStorage.setItem("acerto_email", email);
-
-        const meta = user?.user_metadata ?? {};
-        const name = pickName(meta, email);
-        const avatar = pickAvatar(meta);
-
-        // ✅ valores originais do Google (base)
-        if (name) localStorage.setItem("acerto_google_name", name);
-        if (avatar) localStorage.setItem("acerto_google_avatar", avatar);
-
-        // compatibilidade (se você ainda usa em algum lugar)
-        if (name && !localStorage.getItem("acerto_name")) {
-          localStorage.setItem("acerto_name", name);
+        const supabase = getSupabaseClient();
+        if (!supabase) {
+          setMsg("Supabase não configurado.");
+          return;
         }
-        if (avatar && !localStorage.getItem("acerto_avatar")) {
-          localStorage.setItem("acerto_avatar", avatar);
-        }
-      }
 
-      router.replace("/groups");
-    })();
+        // ✅ Depois do redirect do Google, o Supabase já deve ter a sessão
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          setMsg("Erro ao pegar sessão: " + error.message);
+          return;
+        }
+
+        const user = data.session?.user;
+        if (!user) {
+          setMsg("Sessão não encontrada. Tente logar novamente.");
+          return;
+        }
+
+        // ✅ UID do Supabase (igual ao UID do dashboard)
+        localStorage.setItem("acerto_uid", user.id);
+
+        // ✅ email
+        if (user.email) localStorage.setItem("acerto_email", user.email);
+
+        // ✅ nome e avatar (vem do metadata do Google)
+        const name =
+          (user.user_metadata?.full_name as string | undefined) ||
+          (user.user_metadata?.name as string | undefined) ||
+          "";
+
+        const avatar =
+          (user.user_metadata?.avatar_url as string | undefined) ||
+          (user.user_metadata?.picture as string | undefined) ||
+          "";
+
+        if (name) localStorage.setItem("acerto_name", name);
+        if (avatar) localStorage.setItem("acerto_avatar", avatar);
+
+        // ✅ manda pra tela principal
+        router.replace("/groups");
+      } catch (e: any) {
+        setMsg("Erro inesperado: " + (e?.message || "desconhecido"));
+      }
+    }
+
+    run();
   }, [router]);
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "grid",
-        placeItems: "center",
-        background: "radial-gradient(circle at 30% 30%, #0f3b31 0%, #071f1a 70%)",
-        color: "#e6fff7",
-        fontSize: 16,
-      }}
-    >
-      Processando login…
-    </main>
+    <div className="min-h-screen bg-[#071611] text-white flex items-center justify-center px-4">
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
+        <div className="text-lg font-semibold">Login</div>
+        <div className="mt-2 text-sm text-white/60">{msg}</div>
+      </div>
+    </div>
   );
 }
