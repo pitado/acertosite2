@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Expense, LogEntry } from "../types";
 import { Services } from "../services";
-import ExpenseModal from "./ExpenseModal";
-import ExpenseRow from "./ExpenseRow";
+import { ExpenseModal } from "./ExpenseModal";
+import { ExpenseRow } from "./ExpenseRow";
 
 type View = "home" | "expenses" | "members" | "reports" | "activity";
 
@@ -68,15 +68,8 @@ export default function GroupModal({
 
       net[ex.payer] += ex.amount;
 
-      if (ex.split === "custom") {
-        // se você quiser suportar custom de verdade depois:
-        // hoje seu front não envia shares -> cai no equal
-        const each = ex.amount / participants.length;
-        for (const p of participants) net[p] -= each;
-      } else {
-        const each = ex.amount / participants.length;
-        for (const p of participants) net[p] -= each;
-      }
+      const each = ex.amount / participants.length;
+      for (const p of participants) net[p] -= each;
     }
 
     // arredondar para 2 casas
@@ -220,7 +213,9 @@ export default function GroupModal({
               <div className="mb-3 flex items-center justify-between">
                 <div>
                   <div className="text-base font-semibold">Despesas</div>
-                  <div className="text-xs text-white/60">Cadastre gastos por categoria e divida com o grupo.</div>
+                  <div className="text-xs text-white/60">
+                    Cadastre gastos por categoria e divida com o grupo.
+                  </div>
                 </div>
 
                 <button
@@ -234,30 +229,24 @@ export default function GroupModal({
               {loading ? (
                 <div className="text-sm text-white/60">Carregando despesas...</div>
               ) : expenses.length ? (
-                <div className="space-y-2">
+                <ul className="space-y-2">
                   {expenses.map((e) => (
-                    <ExpenseRow
-                      key={e.id}
-                      expense={e}
-                      onChange={async () => {
-                        await reloadAll();
-                      }}
-                    />
+                    <ExpenseRow key={e.id} e={e} refresh={reloadAll} />
                   ))}
-                </div>
+                </ul>
               ) : (
                 <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-white/60">
                   Nenhuma despesa ainda.
                 </div>
               )}
 
-              {showExpenseModal && (
-                <ExpenseModal
-                  members={memberEmails.length ? memberEmails : ["você"]}
-                  onClose={() => setShowExpenseModal(false)}
-                  onSave={onSaveExpense}
-                />
-              )}
+              {/* ✅ ExpenseModal é named export e precisa da prop open */}
+              <ExpenseModal
+                open={showExpenseModal}
+                members={memberEmails.length ? memberEmails : ["você"]}
+                onClose={() => setShowExpenseModal(false)}
+                onSave={onSaveExpense}
+              />
             </>
           )}
 
