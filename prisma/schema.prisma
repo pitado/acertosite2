@@ -82,3 +82,52 @@ model Invite {
   @@index([groupId])
   @@index([token])
 }
+
+model Expense {
+  id           String   @id @default(cuid())
+  groupId      String
+  title        String
+  amount       Float
+
+  // quem criou / quem pagou (string = email, simples e direto pro teu front atual)
+  buyer        String
+  payer        String
+
+  // "equal" | "custom" (conforme seu front em types.ts)
+  split        String
+
+  // participantes (array de emails)
+  participants Json
+
+  // categoria (comida, casa, viagem etc)
+  category     String
+  subcategory  String?
+  location     String?
+  date_iso     String?
+  pix_key      String?
+
+  // comprovante (dataURL/base64 ou url)
+  proof_url    String?
+
+  // status
+  paid         Boolean  @default(false)
+  paid_by      String?
+
+  created_at   DateTime @default(now())
+
+  group        Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId])
+}
+
+model LogEntry {
+  id         String   @id @default(cuid())
+  groupId    String
+  message    String
+  created_at DateTime @default(now())
+
+  group      Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId])
+}
+
