@@ -1,276 +1,214 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Mail, UserPlus, CheckCircle2, AlertTriangle } from "lucide-react";
-import Modal from "./Modal";
+import { useMemo, useState } from "react";
+import { ChevronRight, Copy, Link as LinkIcon, X, Users } from "lucide-react";
 
 type Group = {
   id: string;
   name: string;
   description?: string | null;
-  membersCount?: number;
-  expensesCount?: number;
-  totalAmount?: number;
 };
 
-type Props = {
-  group: Group;
-  onRefresh: () => void;
-};
-
-type Invite = {
-  email: string;
-  invitedAt: string;
-  status: "pending" | "accepted";
-};
-
-const INVITES_KEY = "acerto_group_invites_v1";
-
-function safeJsonParse<T>(value: string | null, fallback: T): T {
-  if (!value) return fallback;
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-function isValidEmail(email: string) {
-  // simples e eficiente pro seu caso
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-export default function GroupCard({ group, onRefresh }: Props) {
-  const members = group.membersCount ?? 1;
-  const expenses = group.expensesCount ?? 0;
-  const total = group.totalAmount ?? 0;
-
+export default function GroupCard({
+  g,
+  ownerEmail,
+  onEdit,
+  onDelete,
+  onRefresh,
+}: {
+  g: Group;
+  ownerEmail: string;
+  onEdit: () => void;
+  onDelete: () => void;
+  onRefresh?: () => void | Promise<void>;
+}) {
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteMsg, setInviteMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [inviteLink, setInviteLink] = useState<string>("");
+  const [expiresAt, setExpiresAt] = useState<string>("");
+  const [err, setErr] = useState<string>("");
 
-  const ownerEmail = useMemo(() => {
+  const origin = useMemo(() => {
     if (typeof window === "undefined") return "";
-    return localStorage.getItem("acerto_email") ?? "";
+    return window.location.origin;
   }, []);
 
-  const [invites, setInvites] = useState<Invite[]>([]);
+  async function createInvite() {
+    setErr("");
+    setCreating(true);
+    setInviteLink("");
+    setExpiresAt("");
 
-  function loadInvites() {
-    const all = safeJsonParse<Record<string, Invite[]>>(
-      typeof window !== "undefined" ? localStorage.getItem(INVITES_KEY) : null,
-      {}
-    );
-    setInvites(Array.isArray(all[group.id]) ? all[group.id] : []);
+    try {
+      const res = await fetch("/api/invites", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-email": ownerEmail,
+        },
+        body: JSON.stringify({
+          groupId: g.id,
+          role: "MEMBER", // pode trocar pra "ADMIN" se quiser
+          // expiresInMinutes: 60, // se seu backend aceitar (opcional)
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setErr(data?.error || "Não consegui gerar o convite.");
+        setCreating(false);
+        return;
+      }
+
+      // esperado: { token, expiresAt }
+      const token = data?.token;
+      const exp = data?.expiresAt;
+
+      if (!token) {
+        setErr("Convite gerado, mas não veio o token. Verifique a API.");
+        setCreating(false);
+        return;
+      }
+
+      const link = `${origin}/invite/${token}`;
+      setInviteLink(link);
+      if (exp) setExpiresAt(exp);
+
+      setCreating(false);
+    } catch {
+      setErr("Erro ao gerar convite.");
+      setCreating(false);
+    }
   }
 
-  function saveInvites(next: Invite[]) {
-    const all = safeJsonParse<Record<string, Invite[]>>(
-      localStorage.getItem(INVITES_KEY),
-      {}
-    );
-    all[group.id] = next;
-    localStorage.setItem(INVITES_KEY, JSON.stringify(all));
-    setInvites(next);
-  }
-
-  useEffect(() => {
-    loadInvites();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [group.id]);
-
-  const pendingCount = invites.filter((i) => i.status === "pending").length;
-
-  function openInvite() {
-    setInviteMsg(null);
-    setInviteEmail("");
-    loadInvites();
-    setInviteOpen(true);
-  }
-
-  function invite() {
-    const email = inviteEmail.trim().toLowerCase();
-    setInviteMsg(null);
-
-    if (!email) {
-      setInviteMsg({ type: "err", text: "Digite o e-mail da pessoa." });
-      return;
+  async function copy() {
+    if (!inviteLink) return;
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      alert("Link copiado!");
+    } catch {
+      alert("Não consegui copiar automaticamente. Copie manualmente.");
     }
-    if (!isValidEmail(email)) {
-      setInviteMsg({ type: "err", text: "E-mail inválido. Ex.: pessoa@gmail.com" });
-      return;
-    }
-    if (ownerEmail && email === ownerEmail.trim().toLowerCase()) {
-      setInviteMsg({ type: "err", text: "Você não pode convidar você mesmo." });
-      return;
-    }
-
-    const exists = invites.some((i) => i.email.toLowerCase() === email);
-    if (exists) {
-      setInviteMsg({ type: "err", text: "Esse e-mail já foi convidado." });
-      return;
-    }
-
-    const next: Invite[] = [
-      { email, invitedAt: new Date().toISOString(), status: "pending" },
-      ...invites,
-    ];
-    saveInvites(next);
-
-    setInviteMsg({ type: "ok", text: "Convite registrado! (sem banco por enquanto)" });
-    setInviteEmail("");
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h3 className="text-lg font-semibold truncate">{group.name}</h3>
-          <p className="text-sm text-white/60 line-clamp-2">
-            {group.description || "Sem descrição"}
-          </p>
+    <>
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h4 className="font-semibold truncate">{g.name}</h4>
+            <p className="text-xs text-white/60 mt-1 flex items-center gap-2">
+              <Users className="h-3.5 w-3.5" />
+              1 membro · R$ 0,00
+            </p>
+          </div>
+
+          <button
+            className="shrink-0 inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition text-sm"
+            onClick={() => alert("Abrir (quando tiver a página do grupo)")}
+          >
+            Abrir
+            <ChevronRight className="h-4 w-4" />
+          </button>
         </div>
 
-        <button
-          onClick={() => alert("Abrir grupo (troque aqui pela rota do grupo).")}
-          className="h-9 px-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition inline-flex items-center gap-2"
-        >
-          Abrir <span className="opacity-70">→</span>
-        </button>
+        <div className="mt-3 flex gap-2">
+          <button
+            className="flex-1 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 py-2 text-sm transition"
+            onClick={() => {
+              setInviteOpen(true);
+              setInviteLink("");
+              setExpiresAt("");
+              setErr("");
+            }}
+          >
+            Convidar
+          </button>
+
+          <button
+            className="flex-1 rounded-xl bg-emerald-500 text-black py-2 text-sm font-medium hover:bg-emerald-400 transition"
+            onClick={async () => {
+              await onRefresh?.();
+            }}
+          >
+            Atualizar
+          </button>
+        </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        <span className="text-xs px-3 py-1 rounded-full border border-white/10 bg-white/5 text-white/70">
-          👥 {members} membro{members === 1 ? "" : "s"}
-        </span>
-        <span className="text-xs px-3 py-1 rounded-full border border-white/10 bg-white/5 text-white/70">
-          💸 {expenses} despesa{expenses === 1 ? "" : "s"}
-        </span>
-        <span className="text-xs px-3 py-1 rounded-full border border-white/10 bg-white/5 text-white/70">
-          Total: R$ {total.toFixed(2)}
-        </span>
+      {/* MODAL */}
+      {inviteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setInviteOpen(false)}
+          />
 
-        {pendingCount > 0 ? (
-          <span className="text-xs px-3 py-1 rounded-full border border-emerald-400/20 bg-emerald-500/10 text-emerald-200">
-            {pendingCount} convite{pendingCount === 1 ? "" : "s"} pendente{pendingCount === 1 ? "" : "s"}
-          </span>
-        ) : null}
-      </div>
-
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        <button
-          onClick={openInvite}
-          className="rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-4 py-2 transition inline-flex items-center justify-center gap-2"
-        >
-          <UserPlus className="h-4 w-4" />
-          Convidar
-        </button>
-
-        <button
-          onClick={() => onRefresh()}
-          className="rounded-xl bg-emerald-500/90 hover:bg-emerald-500 text-black font-medium px-4 py-2 transition"
-        >
-          Atualizar
-        </button>
-      </div>
-
-      {/* Modal Convidar */}
-      <Modal
-        open={inviteOpen}
-        title={`Convidar para "${group.name}"`}
-        description="Sem banco por enquanto: o convite fica salvo no seu navegador (localStorage)."
-        onClose={() => setInviteOpen(false)}
-        footer={
-          <div className="flex items-center justify-end gap-2">
-            <button
-              onClick={() => setInviteOpen(false)}
-              className="rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-4 py-2 text-sm transition"
-            >
-              Fechar
-            </button>
-            <button
-              onClick={invite}
-              className="rounded-xl bg-emerald-500/90 hover:bg-emerald-500 text-black font-medium px-4 py-2 text-sm transition inline-flex items-center gap-2"
-            >
-              <Mail className="h-4 w-4" />
-              Enviar convite
-            </button>
-          </div>
-        }
-      >
-        <div className="grid gap-4">
-          <label className="grid gap-2">
-            <span className="text-sm text-white/70">E-mail do convidado</span>
-            <input
-              value={inviteEmail}
-              onChange={(e) => {
-                setInviteEmail(e.target.value);
-                setInviteMsg(null);
-              }}
-              placeholder="pessoa@gmail.com"
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm outline-none placeholder:text-white/40 focus:border-emerald-400/40 focus:ring-2 focus:ring-emerald-400/10"
-            />
-          </label>
-
-          {inviteMsg ? (
-            <div
-              className={[
-                "text-sm rounded-xl px-3 py-2 border flex items-start gap-2",
-                inviteMsg.type === "ok"
-                  ? "text-emerald-200 bg-emerald-500/10 border-emerald-500/20"
-                  : "text-red-200 bg-red-500/10 border-red-500/20",
-              ].join(" ")}
-            >
-              {inviteMsg.type === "ok" ? (
-                <CheckCircle2 className="h-4 w-4 mt-0.5" />
-              ) : (
-                <AlertTriangle className="h-4 w-4 mt-0.5" />
-              )}
-              <span>{inviteMsg.text}</span>
-            </div>
-          ) : null}
-
-          <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-            <div className="text-sm font-medium">Convites pendentes</div>
-
-            {pendingCount === 0 ? (
-              <div className="text-sm text-white/60 mt-2">Nenhum convite pendente.</div>
-            ) : (
-              <div className="mt-3 grid gap-2">
-                {invites
-                  .filter((i) => i.status === "pending")
-                  .map((i) => (
-                    <div
-                      key={i.email}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/10 px-3 py-2"
-                    >
-                      <div className="min-w-0">
-                        <div className="text-sm text-white/85 truncate">{i.email}</div>
-                        <div className="text-xs text-white/50">
-                          Pendente
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => {
-                          const next = invites.filter((x) => x.email !== i.email);
-                          saveInvites(next);
-                        }}
-                        className="text-xs rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 px-2 py-1 transition"
-                      >
-                        Remover
-                      </button>
-                    </div>
-                  ))}
+          <div className="relative w-full max-w-lg rounded-2xl border border-white/10 bg-[#071611]/95 backdrop-blur-xl p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="text-lg font-semibold truncate">Convidar para: {g.name}</h3>
+                <p className="text-sm text-white/60">
+                  Gere um link e envie para a pessoa entrar no grupo.
+                </p>
               </div>
-            )}
-          </div>
 
-          <div className="text-xs text-white/50">
-            Depois que você ligar um banco, a gente transforma isso em convite real (link/token ou e-mail).
+              <button
+                className="h-9 w-9 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition flex items-center justify-center"
+                onClick={() => setInviteOpen(false)}
+                aria-label="Fechar"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-4 grid gap-3">
+              <button
+                onClick={createInvite}
+                disabled={creating}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 text-black font-medium px-4 py-2.5 hover:bg-emerald-400 transition disabled:opacity-60"
+              >
+                <LinkIcon className="h-4 w-4" />
+                {creating ? "Gerando..." : "Gerar link de convite"}
+              </button>
+
+              {err && (
+                <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                  {err}
+                </div>
+              )}
+
+              {inviteLink && (
+                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-xs text-white/60">Link do convite</div>
+                  <div className="mt-1 break-all text-sm text-white/90">{inviteLink}</div>
+
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={copy}
+                      className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition text-sm"
+                    >
+                      <Copy className="h-4 w-4" />
+                      Copiar
+                    </button>
+
+                    {expiresAt && (
+                      <div className="ml-auto text-xs text-white/50 self-center">
+                        Expira em: {new Date(expiresAt).toLocaleString()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="text-xs text-white/40">
+                ⚠️ O convite só funciona para quem estiver logado (porque usamos o email do login).
+              </div>
+            </div>
           </div>
         </div>
-      </Modal>
-    </div>
+      )}
+    </>
   );
 }
