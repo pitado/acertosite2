@@ -37,28 +37,29 @@ export async function POST(
     create: { email },
   });
 
-  // cria membership se não existir
-  await prisma.membership.upsert({
+  // ✅ cria membership (GroupMember) se não existir
+  // @@unique([groupId, userId]) => chave composta vira groupId_userId
+  await prisma.groupMember.upsert({
     where: {
-      userId_groupId: {
-        userId: user.id,
+      groupId_userId: {
         groupId: invite.groupId,
+        userId: user.id,
       },
     },
     update: {
       role: invite.role, // respeita role do convite
     },
     create: {
-      userId: user.id,
       groupId: invite.groupId,
+      userId: user.id,
       role: invite.role,
     },
   });
 
-  // marca como usado (pra não reutilizar)
+  // ✅ marca como usado (no schema atual só existe usedAt)
   await prisma.invite.update({
     where: { token },
-    data: { usedAt: new Date(), usedById: user.id },
+    data: { usedAt: new Date() },
   });
 
   return NextResponse.json({
