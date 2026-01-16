@@ -1,61 +1,54 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 
-export default function InviteAcceptPage() {
+export default function AcceptInvitePage() {
   const router = useRouter();
-  const params = useParams<{ token: string }>();
-  const token = params?.token;
+  const params = useParams();
+  const token = params.token as string;
 
-  const [msg, setMsg] = useState("Aceitando convite...");
-  const [err, setErr] = useState<string | null>(null);
+  const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
-    async function run() {
+    async function accept() {
       const email = localStorage.getItem("acerto_email") || "";
+
       if (!email) {
-        setErr("Você precisa estar logado para aceitar o convite.");
-        setMsg("Faça login e depois abra o link novamente.");
+        setStatus("error");
+        setMessage("Você precisa estar logado para aceitar o convite.");
         return;
       }
 
-      try {
-        const res = await fetch(`/api/invites/${token}/accept`, {
-          method: "POST",
-          headers: { "x-user-email": email },
-        });
+      const res = await fetch(`/api/invites/${token}/accept`, {
+        method: "POST",
+        headers: {
+          "x-user-email": email,
+        },
+      });
 
-        const data = await res.json().catch(() => ({}));
+      const data = await res.json();
 
-        if (!res.ok) {
-          setErr(data?.error || "Não consegui aceitar o convite.");
-          setMsg("Convite inválido ou expirado.");
-          return;
-        }
-
-        setMsg("Convite aceito! Indo para seus grupos...");
-        setTimeout(() => router.replace("/groups"), 800);
-      } catch {
-        setErr("Erro de rede.");
-        setMsg("Tente novamente.");
+      if (res.ok) {
+        setStatus("ok");
+        setMessage(`Você entrou no grupo "${data.groupName}"`);
+        setTimeout(() => router.push("/groups"), 1500);
+      } else {
+        setStatus("error");
+        setMessage(data.error || "Erro ao aceitar convite");
       }
     }
 
-    if (token) run();
+    accept();
   }, [token, router]);
 
   return (
     <div className="min-h-screen bg-[#071611] text-white flex items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
-        <h1 className="text-lg font-semibold">Convite</h1>
-        <p className="mt-2 text-sm text-white/60">{msg}</p>
-
-        {err && (
-          <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-            {err}
-          </div>
-        )}
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-6 max-w-md w-full text-center">
+        {status === "loading" && <p>Aceitando convite...</p>}
+        {status === "ok" && <p className="text-emerald-400">{message}</p>}
+        {status === "error" && <p className="text-red-400">{message}</p>}
       </div>
     </div>
   );
