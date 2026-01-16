@@ -13,42 +13,46 @@ enum Role {
 }
 
 model User {
-  id          String       @id @default(cuid())
-  email       String       @unique
-  name        String?
-  avatarUrl   String?
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  avatarUrl String?
+
+  // ✅ lado contrário do dono do grupo (corrige seu erro)
+  ownedGroups Group[] @relation("UserOwnedGroups")
 
   memberships Membership[]
   expenses    Expense[]
-  invites     Invite[]     @relation("InvitedUser")
 
-  createdAt   DateTime     @default(now())
+  createdAt DateTime @default(now())
 }
 
 model Group {
-  id          String       @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
   description String?
   ownerId     String
 
-  owner       User         @relation(fields: [ownerId], references: [id])
-  members     Membership[]
-  expenses    Expense[]    // ✅ relação oposta corrigida
-  logs        LogEntry[]   // ✅ relação oposta corrigida
-  invites     Invite[]
+  // ✅ agora tem nome de relation e bate com User.ownedGroups
+  owner   User @relation("UserOwnedGroups", fields: [ownerId], references: [id])
 
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  members  Membership[]
+  expenses Expense[]
+  logs     LogEntry[]
+  invites  Invite[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Membership {
-  id        String   @id @default(cuid())
-  userId    String
-  groupId   String
-  role      Role     @default(MEMBER)
+  id      String @id @default(cuid())
+  userId  String
+  groupId String
+  role    Role   @default(MEMBER)
 
-  user      User     @relation(fields: [userId], references: [id])
-  group     Group    @relation(fields: [groupId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+  group Group @relation(fields: [groupId], references: [id])
 
   createdAt DateTime @default(now())
 
@@ -56,40 +60,39 @@ model Membership {
 }
 
 model Expense {
-  id          String   @id @default(cuid())
-  groupId     String
-  paidById    String
-  title       String
-  category    String
-  amount      Float
-  receiptUrl  String?
+  id         String  @id @default(cuid())
+  groupId    String
+  paidById   String
+  title      String
+  category   String
+  amount     Float
+  receiptUrl String?
 
-  group       Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  paidBy      User     @relation(fields: [paidById], references: [id])
+  group  Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  paidBy User  @relation(fields: [paidById], references: [id])
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 }
 
 model Invite {
-  id          String   @id @default(cuid())
-  groupId     String
-  email       String
-  token       String   @unique
-  expiresAt   DateTime
-  acceptedAt  DateTime?
+  id         String   @id @default(cuid())
+  groupId    String
+  email      String
+  token      String   @unique
+  expiresAt  DateTime
+  acceptedAt DateTime?
 
-  group       Group    @relation(fields: [groupId], references: [id])
-  invitedUser User?    @relation("InvitedUser", fields: [email], references: [email])
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 }
 
 model LogEntry {
-  id        String   @id @default(cuid())
-  groupId   String
-  message   String
+  id      String @id @default(cuid())
+  groupId String
+  message String
 
-  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 }
