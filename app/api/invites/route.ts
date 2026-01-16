@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/src/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 function getUserEmail(req: Request) {
   return req.headers.get("x-user-email") || "";
