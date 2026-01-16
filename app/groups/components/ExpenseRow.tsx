@@ -20,19 +20,18 @@ export function ExpenseRow({ e, refresh }: { e: Expense; refresh: () => Promise<
             <span className="ml-2 text-xs text-amber-300">Pendente</span>
           )}
         </div>
-        <span className="text-emerald-100/70 text-xs">
-          • {new Date(e.date_iso).toLocaleDateString()}
-        </span>
+
+        <span className="text-emerald-100/70 text-xs">• {new Date(e.date_iso).toLocaleDateString()}</span>
+
         <button
           className="ml-auto inline-flex items-center gap-1 text-emerald-200/80 hover:text-emerald-100 text-[11px]"
           onClick={() => setOpen((v) => !v)}
         >
           Ver detalhes{" "}
-          <ChevronDown
-            className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : "rotate-0"}`}
-          />
+          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : "rotate-0"}`} />
         </button>
       </div>
+
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
@@ -43,6 +42,7 @@ export function ExpenseRow({ e, refresh }: { e: Expense; refresh: () => Promise<
           >
             <div className="text-emerald-100/75 mt-2">
               {e.location && <div className="mt-1">Local: {e.location}</div>}
+
               {e.proof_url && (
                 <div className="mt-2">
                   <a
@@ -56,6 +56,7 @@ export function ExpenseRow({ e, refresh }: { e: Expense; refresh: () => Promise<
                 </div>
               )}
             </div>
+
             <div className="mt-3 flex items-center gap-3">
               <button
                 className="text-emerald-200/70 hover:text-red-300 text-xs"
@@ -66,17 +67,20 @@ export function ExpenseRow({ e, refresh }: { e: Expense; refresh: () => Promise<
               >
                 Excluir
               </button>
+
               {!e.paid && (
                 <>
                   <button
                     className="text-emerald-200/70 hover:text-emerald-100 text-xs"
                     onClick={async () => {
-                      await Services.markPaid(e.id, "owner");
+                      // ✅ Services.markPaid(expenseId, paid, by)
+                      await Services.markPaid(e.id, true, "owner");
                       await refresh();
                     }}
                   >
                     Marcar como pago
                   </button>
+
                   <label
                     htmlFor={`proof-${e.id}`}
                     className="text-emerald-200/70 hover:text-emerald-100 text-xs cursor-pointer inline-flex items-center gap-1"
@@ -84,6 +88,7 @@ export function ExpenseRow({ e, refresh }: { e: Expense; refresh: () => Promise<
                     <Paperclip className="h-3 w-3" />
                     Adicionar comprovante
                   </label>
+
                   <input
                     id={`proof-${e.id}`}
                     type="file"
@@ -92,9 +97,11 @@ export function ExpenseRow({ e, refresh }: { e: Expense; refresh: () => Promise<
                     onChange={async (ev) => {
                       const f = ev.target.files?.[0];
                       if (!f) return;
+
                       const fr = new FileReader();
                       fr.onload = async () => {
-                        await Services.attachProof(e.id, String(fr.result), "owner");
+                        // ✅ Services.attachProof(expenseId, proofUrl)
+                        await Services.attachProof(e.id, String(fr.result));
                         await refresh();
                       };
                       fr.readAsDataURL(f);
