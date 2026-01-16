@@ -40,6 +40,10 @@ model Group {
   members GroupMember[]
   invites Invite[]
 
+  // ✅ FALTAVA ISSO AQUI (lado inverso das relações)
+  expenses Expense[]
+  logs     LogEntry[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -130,4 +134,3 @@ model LogEntry {
 
   @@index([groupId])
 }
-
