@@ -9,6 +9,7 @@ datasource db {
 
 enum Role {
   OWNER
+  ADMIN
   MEMBER
 }
 
@@ -18,82 +19,114 @@ model User {
   name      String?
   avatarUrl String?
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ✅ relação inversa do Group.owner
   ownedGroups Group[] @relation("UserOwnedGroups")
 
-  memberships Membership[]
-  expenses    Expense[]
+  // ✅ você usa prisma.groupMember no código
+  memberships GroupMember[]
 
-  createdAt DateTime @default(now())
+  // opcional: convites criados por alguém
+  invitesCreated Invite[] @relation("InviteCreator")
 }
 
 model Group {
   id          String   @id @default(cuid())
   name        String
   description String?
-  ownerId     String
 
+  ownerId String
   owner   User @relation("UserOwnedGroups", fields: [ownerId], references: [id])
-
-  members  Membership[]
-  expenses Expense[]
-  logs     LogEntry[]
-  invites  Invite[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // ✅ relação inversa de GroupMember.group
+  members GroupMember[]
+
+  // ✅ relação inversa de Invite.group
+  invites Invite[]
+
+  // ✅ relação inversa de Expense.group  (corrige seu erro do log)
+  expenses Expense[]
+
+  // ✅ relação inversa de LogEntry.group (corrige seu erro do log)
+  activity LogEntry[]
 }
 
-model Membership {
-  id      String @id @default(cuid())
-  userId  String
+model GroupMember {
+  id String @id @default(cuid())
+
   groupId String
+  userId  String
   role    Role   @default(MEMBER)
 
-  user  User  @relation(fields: [userId], references: [id])
-  group Group @relation(fields: [groupId], references: [id])
-
   createdAt DateTime @default(now())
 
-  @@unique([userId, groupId])
-}
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-model Expense {
-  id         String  @id @default(cuid())
-  groupId    String
-  paidById   String
-  title      String
-  category   String
-  amount     Float
-  receiptUrl String?
-
-  group  Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  paidBy User  @relation(fields: [paidById], references: [id])
-
-  createdAt DateTime @default(now())
+  // ✅ seu código usa: where: { groupId_userId: { groupId, userId } }
+  @@unique([groupId, userId], name: "groupId_userId")
 }
 
 model Invite {
-  id         String   @id @default(cuid())
-  groupId    String
+  token String @id @default(cuid())
 
-  // ✅ AGORA É OPCIONAL (resolve seu erro do NULL existente)
-  email      String?
+  groupId String
+  group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
-  token      String   @unique
-  expiresAt  DateTime
-  acceptedAt DateTime?
+  // ✅ deixe opcional pra não quebrar se já tiver NULL no banco
+  email String?
 
-  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  role Role @default(MEMBER)
+
+  expiresAt DateTime?
+  usedAt    DateTime?
 
   createdAt DateTime @default(now())
+
+  // opcional: quem criou o convite
+  createdById String?
+  createdBy   User? @relation("InviteCreator", fields: [createdById], references: [id], onDelete: SetNull)
+}
+
+model Expense {
+  id String @id @default(cuid())
+
+  groupId String
+  group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  title  String
+  amount Float
+
+  buyer String
+  payer String
+
+  split        String
+  participants Json
+
+  category    String
+  subcategory String?
+  location    String?
+  date_iso    String?
+
+  pix_key   String?
+  proof_url String?
+
+  created_at DateTime @default(now())
 }
 
 model LogEntry {
-  id      String @id @default(cuid())
+  id String @id @default(cuid())
+
   groupId String
+  group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
   message String
 
-  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
+  // ✅ seu endpoint ordena por created_at
+  created_at DateTime @default(now())
 }
