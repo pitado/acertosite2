@@ -7,130 +7,89 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum GroupRole {
+enum Role {
   OWNER
   MEMBER
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  avatarUrl String?
+  id          String       @id @default(cuid())
+  email       String       @unique
+  name        String?
+  avatarUrl   String?
 
-  // ✅ lado inverso do owner do Group
-  ownedGroups Group[] @relation("GroupOwner")
+  memberships Membership[]
+  expenses    Expense[]
+  invites     Invite[]     @relation("InvitedUser")
 
-  memberships GroupMember[]
-  invitesSent Invite[] @relation("InvitesSent")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime     @default(now())
 }
 
 model Group {
-  id          String  @id @default(cuid())
+  id          String       @id @default(cuid())
   name        String
   description String?
+  ownerId     String
 
-  ownerId String
-  // ✅ relation nomeada e com inverso em User.ownedGroups
-  owner   User   @relation("GroupOwner", fields: [ownerId], references: [id])
+  owner       User         @relation(fields: [ownerId], references: [id])
+  members     Membership[]
+  expenses    Expense[]    // ✅ relação oposta corrigida
+  logs        LogEntry[]   // ✅ relação oposta corrigida
+  invites     Invite[]
 
-  members GroupMember[]
-  invites Invite[]
-
-  // ✅ FALTAVA ISSO AQUI (lado inverso das relações)
-  expenses Expense[]
-  logs     LogEntry[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 }
 
-model GroupMember {
-  id String @id @default(cuid())
+model Membership {
+  id        String   @id @default(cuid())
+  userId    String
+  groupId   String
+  role      Role     @default(MEMBER)
 
-  groupId String
-  userId  String
-  role    GroupRole @default(MEMBER)
-
-  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-
-  @@unique([groupId, userId])
-  @@index([userId])
-  @@index([groupId])
-}
-
-model Invite {
-  id String @id @default(cuid())
-
-  groupId String
-  group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
-
-  token     String    @unique
-  email     String?
-  role      GroupRole @default(MEMBER)
-
-  createdById String
-  createdBy   User @relation("InvitesSent", fields: [createdById], references: [id])
-
-  expiresAt DateTime
-  usedAt    DateTime?
+  user      User     @relation(fields: [userId], references: [id])
+  group     Group    @relation(fields: [groupId], references: [id])
 
   createdAt DateTime @default(now())
 
-  @@index([groupId])
-  @@index([token])
+  @@unique([userId, groupId])
 }
 
 model Expense {
-  id           String   @id @default(cuid())
-  groupId      String
-  title        String
-  amount       Float
+  id          String   @id @default(cuid())
+  groupId     String
+  paidById    String
+  title       String
+  category    String
+  amount      Float
+  receiptUrl  String?
 
-  // quem criou / quem pagou (string = email, simples e direto pro teu front atual)
-  buyer        String
-  payer        String
+  group       Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  paidBy      User     @relation(fields: [paidById], references: [id])
 
-  // "equal" | "custom" (conforme seu front em types.ts)
-  split        String
+  createdAt   DateTime @default(now())
+}
 
-  // participantes (array de emails)
-  participants Json
+model Invite {
+  id          String   @id @default(cuid())
+  groupId     String
+  email       String
+  token       String   @unique
+  expiresAt   DateTime
+  acceptedAt  DateTime?
 
-  // categoria (comida, casa, viagem etc)
-  category     String
-  subcategory  String?
-  location     String?
-  date_iso     String?
-  pix_key      String?
+  group       Group    @relation(fields: [groupId], references: [id])
+  invitedUser User?    @relation("InvitedUser", fields: [email], references: [email])
 
-  // comprovante (dataURL/base64 ou url)
-  proof_url    String?
-
-  // status
-  paid         Boolean  @default(false)
-  paid_by      String?
-
-  created_at   DateTime @default(now())
-
-  group        Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
-
-  @@index([groupId])
+  createdAt   DateTime @default(now())
 }
 
 model LogEntry {
-  id         String   @id @default(cuid())
-  groupId    String
-  message    String
-  created_at DateTime @default(now())
+  id        String   @id @default(cuid())
+  groupId   String
+  message   String
 
-  group      Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
-  @@index([groupId])
+  createdAt DateTime @default(now())
 }
