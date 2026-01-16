@@ -1,15 +1,14 @@
 import { NextResponse } from "next/server";
-// ⚠️ use o MESMO import que você já usa em app/api/invites/route.ts
-import prisma from "@/src/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: { token: string } }
 ) {
   const token = params.token;
 
-  // email do usuário logado
-  const email = _req.headers.get("x-user-email") || "";
+  // email do usuário logado (por enquanto via header)
+  const email = req.headers.get("x-user-email") || "";
   if (!email) {
     return NextResponse.json({ error: "Missing x-user-email" }, { status: 401 });
   }
