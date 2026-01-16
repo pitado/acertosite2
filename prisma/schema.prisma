@@ -20,15 +20,10 @@ model User {
   avatarUrl String?
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime? // ✅ AGORA OPCIONAL (corrige o erro)
 
-  // ✅ relação inversa do Group.owner
   ownedGroups Group[] @relation("UserOwnedGroups")
-
-  // ✅ você usa prisma.groupMember no código
   memberships GroupMember[]
-
-  // opcional: convites criados por alguém
   invitesCreated Invite[] @relation("InviteCreator")
 }
 
@@ -43,16 +38,9 @@ model Group {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // ✅ relação inversa de GroupMember.group
-  members GroupMember[]
-
-  // ✅ relação inversa de Invite.group
-  invites Invite[]
-
-  // ✅ relação inversa de Expense.group  (corrige seu erro do log)
+  members  GroupMember[]
+  invites  Invite[]
   expenses Expense[]
-
-  // ✅ relação inversa de LogEntry.group (corrige seu erro do log)
   activity LogEntry[]
 }
 
@@ -61,14 +49,13 @@ model GroupMember {
 
   groupId String
   userId  String
-  role    Role   @default(MEMBER)
+  role    Role @default(MEMBER)
 
   createdAt DateTime @default(now())
 
   group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // ✅ seu código usa: where: { groupId_userId: { groupId, userId } }
   @@unique([groupId, userId], name: "groupId_userId")
 }
 
@@ -78,7 +65,6 @@ model Invite {
   groupId String
   group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
-  // ✅ deixe opcional pra não quebrar se já tiver NULL no banco
   email String?
 
   role Role @default(MEMBER)
@@ -88,7 +74,6 @@ model Invite {
 
   createdAt DateTime @default(now())
 
-  // opcional: quem criou o convite
   createdById String?
   createdBy   User? @relation("InviteCreator", fields: [createdById], references: [id], onDelete: SetNull)
 }
@@ -126,7 +111,5 @@ model LogEntry {
   group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   message String
-
-  // ✅ seu endpoint ordena por created_at
   created_at DateTime @default(now())
 }
