@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/src/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 // Pega o user via headers simples (por enquanto)
 // Depois a gente liga isso com Supabase session de verdade.
