@@ -13,25 +13,29 @@ enum GroupRole {
 }
 
 model User {
-  id        String        @id @default(cuid())
-  email     String        @unique
+  id        String   @id @default(cuid())
+  email     String   @unique
   name      String?
   avatarUrl String?
 
+  // ✅ lado inverso do owner do Group
+  ownedGroups Group[] @relation("GroupOwner")
+
   memberships GroupMember[]
-  invitesSent Invite[]     @relation("InvitesSent")
+  invitesSent Invite[] @relation("InvitesSent")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Group {
-  id          String        @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
   description String?
 
   ownerId String
-  owner   User          @relation(fields: [ownerId], references: [id])
+  // ✅ relation nomeada e com inverso em User.ownedGroups
+  owner   User   @relation("GroupOwner", fields: [ownerId], references: [id])
 
   members GroupMember[]
   invites Invite[]
@@ -63,8 +67,8 @@ model Invite {
   groupId String
   group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
-  token     String   @unique
-  email     String?  // opcional (se quiser amarrar por e-mail no futuro)
+  token     String    @unique
+  email     String?
   role      GroupRole @default(MEMBER)
 
   createdById String
