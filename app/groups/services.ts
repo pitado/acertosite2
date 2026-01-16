@@ -1,76 +1,93 @@
-import type { Expense, Group, Invite } from "./types";
+import type { Expense, Group, Invite, LogEntry } from "./types";
+
+function getEmail() {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem("acerto_email") || "";
+}
+
+function authHeaders() {
+  const email = getEmail();
+  return email ? { "x-user-email": email } : {};
+}
+
+async function handle<T>(res: Response): Promise<T> {
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error || "Erro");
+  return data as T;
+}
 
 export const Services = {
-  async listGroups(ownerEmail: string, q = "") {
-    const r = await fetch(
-      `/api/groups?ownerEmail=${encodeURIComponent(ownerEmail)}&q=${encodeURIComponent(q)}`
-    );
-    return r.ok ? ((await r.json()) as Group[]) : [];
+  async listGroups(ownerEmail?: string): Promise<Group[]> {
+    // compat (mas preferir header)
+    const res = await fetch(`/api/groups`, { headers: authHeaders() });
+    const data = await handle<{ groups: Group[] }>(res);
+    return data.groups;
   },
-  async createGroup(
-    ownerEmail: string,
-    payload: { name: string; description?: string; roleDateISO?: string; emails: string[] }
-  ) {
-    const r = await fetch("/api/groups", {
+
+  async createGroup(name: string, ownerEmail?: string): Promise<Group> {
+    const res = await fetch(`/api/groups`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ownerEmail, ...payload }),
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ name }),
     });
-    if (!r.ok) throw new Error((await r.json()).error || "Falha ao criar");
-    return (await r.json()) as { id: string };
+    const data = await handle<{ group: Group }>(res);
+    return data.group;
   },
-  async updateGroup(
-    id: string,
-    payload: { name?: string; description?: string; roleDateISO?: string; emails?: string[] }
-  ) {
-    const r = await fetch(`/api/groups/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (!r.ok) throw new Error((await r.json()).error || "Falha ao atualizar");
+
+  async listExpenses(groupId: string): Promise<Expense[]> {
+    const res = await fetch(`/api/groups/${groupId}/expenses`, { headers: authHeaders() });
+    const data = await handle<{ expenses: Expense[] }>(res);
+    return data.expenses;
   },
-  async deleteGroup(id: string) {
-    const r = await fetch(`/api/groups/${id}`, { method: "DELETE" });
-    if (!r.ok) throw new Error((await r.json()).error || "Falha ao excluir");
-  },
-  async listInvites(groupId: string) {
-    const r = await fetch(`/api/groups/${groupId}/invites`);
-    return r.ok ? ((await r.json()) as Invite[]) : [];
-  },
-  async createInvite(groupId: string) {
-    const r = await fetch(`/api/groups/${groupId}/invites`, { method: "POST" });
-    if (!r.ok) throw new Error((await r.json()).error || "Falha ao convidar");
-    return (await r.json()) as { token: string };
-  },
-  async listExpenses(groupId: string) {
-    const r = await fetch(`/api/groups/${groupId}/expenses`);
-    return r.ok ? ((await r.json()) as Expense[]) : [];
-  },
-  async createExpense(groupId: string, data: Omit<Expense, "id" | "group_id" | "created_at">) {
-    const r = await fetch(`/api/groups/${groupId}/expenses`, {
+
+  async createExpense(groupId: string, expense: Omit<Expense, "id" | "group_id" | "created_at">) {
+    const res = await fetch(`/api/groups/${groupId}/expenses`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify(expense),
     });
-    if (!r.ok) throw new Error((await r.json()).error || "Falha ao salvar despesa");
-    return (await r.json()) as Expense;
+    const data = await handle<{ expense: Expense }>(res);
+    return data.expense;
   },
-  async removeExpense(id: string) {
-    await fetch(`/api/expenses/${id}`, { method: "DELETE" });
-  },
-  async markPaid(id: string, by: string) {
-    await fetch(`/api/expenses/${id}`, {
+
+  async markPaid(expenseId: string, paid: boolean, by: string) {
+    const res = await fetch(`/api/expenses/${expenseId}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ paid: true, by }),
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ paid, by }),
     });
+    const data = await handle<{ expense: Expense }>(res);
+    return data.expense;
   },
-  async attachProof(id: string, dataUrl: string, by: string) {
-    await fetch(`/api/expenses/${id}`, {
+
+  async attachProof(expenseId: string, proofUrl: string) {
+    const res = await fetch(`/api/expenses/${expenseId}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ proofUrl: dataUrl, paid: true, by }),
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ proofUrl }),
     });
+    const data = await handle<{ expense: Expense }>(res);
+    return data.expense;
+  },
+
+  async removeExpense(expenseId: string) {
+    const res = await fetch(`/api/expenses/${expenseId}`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    const data = await handle<{ ok: boolean }>(res);
+    return data.ok;
+  },
+
+  async listMembers(groupId: string): Promise<{ email: string; role: string }[]> {
+    const res = await fetch(`/api/groups/${groupId}/members`, { headers: authHeaders() });
+    const data = await handle<{ members: { email: string; role: string }[] }>(res);
+    return data.members;
+  },
+
+  async listActivity(groupId: string): Promise<LogEntry[]> {
+    const res = await fetch(`/api/groups/${groupId}/activity`, { headers: authHeaders() });
+    const data = await handle<{ activity: LogEntry[] }>(res);
+    return data.activity;
   },
 };
