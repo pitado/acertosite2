@@ -13,8 +13,7 @@ import {
   BarChart3,
 } from "lucide-react";
 
-import GroupCard from "./components/GroupCard";
-import EmptyState from "./components/EmptyState";
+import InviteModal from "./components/InviteModal";
 
 type Group = {
   id: string;
@@ -26,45 +25,32 @@ export default function GroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState("");
-  const [email, setEmail] = useState("");
+  const [inviteGroupId, setInviteGroupId] = useState<string | null>(null);
 
   const groupsRef = useRef<HTMLDivElement | null>(null);
 
-  // 🔹 user (localStorage)
+  // 🔹 carrega dados do usuário + grupos
   useEffect(() => {
-    const n = localStorage.getItem("acerto_name") || "";
-    const a = localStorage.getItem("acerto_avatar") || "";
-    const e = localStorage.getItem("acerto_email") || "";
+    setName(localStorage.getItem("acerto_name") || "");
+    setAvatar(localStorage.getItem("acerto_avatar") || "");
 
-    setName(n);
-    setAvatar(a);
-    setEmail(e);
+    loadGroups();
   }, []);
 
   async function loadGroups() {
-    try {
-      const res = await fetch("/api/groups", {
-        cache: "no-store",
-        headers: email ? { "x-user-email": email } : {},
-      });
+    const email = localStorage.getItem("acerto_email") || "";
 
-      if (!res.ok) {
-        setGroups([]);
-        return;
-      }
+    const res = await fetch("/api/groups", {
+      headers: {
+        "x-user-email": email,
+      },
+    });
 
+    if (res.ok) {
       const data = await res.json();
-      const list = Array.isArray(data) ? data : data.groups ?? [];
-      setGroups(list);
-    } catch {
-      setGroups([]);
+      setGroups(data.groups || []);
     }
   }
-
-  useEffect(() => {
-    if (email) loadGroups();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [email]);
 
   const hasGroups = groups.length > 0;
 
@@ -79,42 +65,32 @@ export default function GroupsPage() {
 
   async function createGroup() {
     const groupName = prompt("Nome do grupo:");
-    if (!groupName?.trim()) return;
+    if (!groupName) return;
 
-    try {
-      const res = await fetch("/api/groups", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(email ? { "x-user-email": email } : {}),
-        },
-        body: JSON.stringify({
-          name: groupName.trim(),
-          description: null,
-        }),
-      });
+    const email = localStorage.getItem("acerto_email") || "";
 
-      if (!res.ok) {
-        alert("Não consegui criar o grupo. Verifique se você está logado.");
-        return;
-      }
+    await fetch("/api/groups", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-user-email": email,
+      },
+      body: JSON.stringify({ name: groupName }),
+    });
 
-      await loadGroups();
-    } catch {
-      alert("Erro ao criar grupo.");
-    }
+    loadGroups();
   }
 
   return (
     <div className="min-h-screen bg-[#071611] text-white relative overflow-hidden">
       {/* glow */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 -left-40 h-[520px] w-[520px] rounded-full bg-emerald-500/10 blur-3xl" />
-        <div className="absolute top-32 -right-40 h-[620px] w-[620px] rounded-full bg-teal-400/10 blur-3xl" />
-        <div className="absolute bottom-[-220px] left-1/3 h-[620px] w-[620px] rounded-full bg-green-500/10 blur-3xl" />
+        <div className="-top-40 -left-40 absolute h-[520px] w-[520px] rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="top-32 -right-40 absolute h-[620px] w-[620px] rounded-full bg-teal-400/10 blur-3xl" />
+        <div className="bottom-[-220px] left-1/3 absolute h-[620px] w-[620px] rounded-full bg-green-500/10 blur-3xl" />
       </div>
 
-      {/* HEADER (sticky) */}
+      {/* HEADER */}
       <header className="sticky top-0 z-30 border-b border-white/10 bg-[#071611]/70 backdrop-blur-xl">
         <div className="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
@@ -129,26 +105,7 @@ export default function GroupsPage() {
             </div>
 
             <div className="min-w-0">
-              <div className="flex items-center gap-3">
-                <h1 className="text-lg font-semibold truncate">Seus grupos</h1>
-
-                <nav className="hidden sm:flex items-center gap-2 text-sm">
-                  <span className="text-white/30">|</span>
-                  <Link
-                    href="/groups"
-                    className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-white"
-                  >
-                    Grupos
-                  </Link>
-                  <Link
-                    href="/reports"
-                    className="px-2 py-1 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 text-white/70 hover:text-white transition"
-                  >
-                    Relatórios
-                  </Link>
-                </nav>
-              </div>
-
+              <h1 className="text-lg font-semibold truncate">Seus grupos</h1>
               <p className="text-sm text-white/60 truncate">
                 Crie, gerencie e organize seus grupos.
               </p>
@@ -159,7 +116,6 @@ export default function GroupsPage() {
             <Link
               href="/reports"
               className="hidden sm:inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition text-sm"
-              title="Relatórios"
             >
               <BarChart3 className="h-4 w-4" />
               Relatórios
@@ -168,8 +124,6 @@ export default function GroupsPage() {
             <Link
               href="/profile"
               className="h-10 w-10 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center transition"
-              aria-label="Configurações do perfil"
-              title="Perfil"
             >
               <Settings className="h-4 w-4" />
             </Link>
@@ -187,19 +141,19 @@ export default function GroupsPage() {
 
       {/* CONTENT */}
       <main className="relative z-10 mx-auto max-w-6xl px-4 py-8 space-y-6">
-        {/* SAUDAÇÃO + CTA */}
+        {/* SAUDAÇÃO */}
         <section className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold">{firstName}</h2>
             <p className="text-sm text-white/60 mt-1">
-              Crie, gerencie e organize suas despesas de forma simples.
+              Organize despesas sem dor de cabeça.
             </p>
           </div>
 
           {hasGroups ? (
             <button
               onClick={scrollToGroups}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-4 py-2 transition"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-4 py-2 transition"
             >
               Ver meus grupos
               <ChevronRight className="h-4 w-4" />
@@ -207,7 +161,7 @@ export default function GroupsPage() {
           ) : (
             <button
               onClick={createGroup}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-2 text-black font-medium hover:bg-emerald-400 transition"
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2 text-black font-medium hover:bg-emerald-400 transition"
             >
               <Sparkles className="h-4 w-4" />
               Criar primeiro grupo
@@ -215,153 +169,88 @@ export default function GroupsPage() {
           )}
         </section>
 
-        {/* SEM GRUPOS */}
-        {!hasGroups && (
-          <section className="grid lg:grid-cols-2 gap-6">
-            <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 flex flex-col justify-center">
-              <h3 className="text-lg font-semibold">Não há grupos por aqui</h3>
-              <p className="text-sm text-white/60 mt-1">
-                Que tal criar um agora e deixar as contas em ordem?
-              </p>
+        {/* DASHBOARD */}
+        {hasGroups && (
+          <section className="grid lg:grid-cols-3 gap-6">
+            {/* COLUNA ESQUERDA */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Atividades */}
+              <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
+                <h3 className="text-lg font-semibold">Atividades recentes</h3>
 
-              <button
-                onClick={createGroup}
-                className="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2 text-black font-medium w-fit hover:bg-emerald-400 transition"
-              >
-                <Plus className="h-4 w-4" />
-                Criar primeiro grupo
-              </button>
+                <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
+                  <Receipt className="mx-auto h-6 w-6 text-white/60" />
+                  <p className="mt-3 text-sm text-white/60">
+                    Em breve: despesas, acertos e movimentações.
+                  </p>
+                </div>
+              </div>
+
+              {/* Como funciona */}
+              <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
+                <h3 className="text-lg font-semibold">Como funciona o Acertô?</h3>
+
+                <div className="mt-4 grid sm:grid-cols-3 gap-3">
+                  <Step icon={<Users />} text="Crie um grupo" />
+                  <Step icon={<Receipt />} text="Adicione despesas" />
+                  <Step icon={<AlertCircle />} text="Veja os acertos" />
+                </div>
+              </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
-              <h3 className="text-lg font-semibold mb-4">Como funciona o Acertô?</h3>
+            {/* COLUNA DIREITA: GRUPOS */}
+            <div
+              ref={groupsRef}
+              className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-lg font-semibold">Meus grupos</h3>
+                <button
+                  onClick={createGroup}
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-3 py-2 text-black font-medium hover:bg-emerald-400 transition text-sm"
+                >
+                  <Plus className="h-4 w-4" />
+                  Novo
+                </button>
+              </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                <Step icon={<Users />} text="Crie um grupo" />
-                <Step icon={<Receipt />} text="Adicione despesas" />
-                <Step icon={<AlertCircle />} text="Veja os acertos" />
+              <div className="mt-4 space-y-3 max-h-[520px] overflow-auto pr-1">
+                {groups.map((g) => (
+                  <div
+                    key={g.id}
+                    className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                  >
+                    <h4 className="font-semibold truncate">{g.name}</h4>
+
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        className="flex-1 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 py-2 text-sm transition"
+                        onClick={() => setInviteGroupId(g.id)}
+                      >
+                        Convidar
+                      </button>
+                      <button
+                        className="flex-1 rounded-xl bg-emerald-500 text-black py-2 text-sm font-medium hover:bg-emerald-400 transition"
+                        onClick={() => alert("Página do grupo (próximo passo)")}
+                      >
+                        Abrir
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </section>
         )}
-
-        {/* COM GRUPOS */}
-        {hasGroups && (
-          <>
-            {/* RESUMO */}
-            <section className="space-y-3">
-              <h3 className="text-sm font-medium text-white/70">Resumo do mês</h3>
-
-              <div className="grid md:grid-cols-4 gap-4">
-                <Summary title="Total este mês" value="R$ 0,00" />
-                <Summary title="Seus grupos" value={groups.length.toString()} />
-                <Summary title="Pendentes" value="0" />
-                <Summary title="Não acertados" value="0" />
-              </div>
-            </section>
-
-            {/* DASHBOARD */}
-            <section className="grid lg:grid-cols-3 gap-6">
-              {/* COLUNA ESQUERDA */}
-              <div className="lg:col-span-2 space-y-6">
-                <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Atividades recentes</h3>
-                    <button className="text-white/60 hover:text-white transition text-sm">
-                      ⋯
-                    </button>
-                  </div>
-
-                  <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
-                    <div className="mx-auto h-12 w-12 rounded-2xl border border-white/10 bg-white/5 flex items-center justify-center">
-                      <Receipt className="h-5 w-5 text-white/70" />
-                    </div>
-                    <p className="mt-3 text-sm text-white/60">
-                      Aqui aparecerão as últimas despesas, acertos e movimentações.
-                    </p>
-                    <p className="mt-2 text-xs text-white/40">• Nenhuma atividade recente</p>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
-                  <h3 className="text-lg font-semibold">Como funciona o Acertô?</h3>
-
-                  <div className="mt-4 grid sm:grid-cols-3 gap-3">
-                    <QuickAction
-                      icon={<Users className="h-5 w-5" />}
-                      title="Crie um grupo"
-                      subtitle="Comece definindo os participantes"
-                      onClick={createGroup}
-                    />
-                    <QuickAction
-                      icon={<Receipt className="h-5 w-5" />}
-                      title="Adicionar despesas"
-                      subtitle="Lance gastos e categorize"
-                      onClick={() => alert("Em breve: adicionar despesas")}
-                    />
-                    <Link
-                      href="/reports"
-                      className="text-left rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition p-4 block"
-                    >
-                      <div className="text-emerald-300">
-                        <BarChart3 className="h-5 w-5" />
-                      </div>
-                      <div className="mt-3 font-semibold">Ver relatórios</div>
-                      <div className="mt-1 text-xs text-white/60">
-                        Acompanhe quem deve e quem recebe
-                      </div>
-                    </Link>
-                  </div>
-                </div>
-              </div>
-
-              {/* COLUNA DIREITA: GRUPOS */}
-              <div ref={groupsRef} className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-lg font-semibold">Meus grupos</h3>
-                  <button
-                    onClick={createGroup}
-                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-3 py-2 text-black font-medium hover:bg-emerald-400 transition text-sm"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Novo
-                  </button>
-                </div>
-
-                <p className="mt-1 text-sm text-white/60">
-                  Acesse rapidamente seus grupos.
-                </p>
-
-                <div className="mt-4 space-y-3 max-h-[520px] overflow-auto pr-1">
-                  {groups.map((g) => (
-                    <GroupCard
-                      key={g.id}
-                      g={g}
-                      ownerEmail={email || "sem-email@local"}
-                      onEdit={() => alert("Em breve: editar grupo")}
-                      onDelete={async () => alert("Em breve: excluir grupo")}
-                      onRefresh={loadGroups}
-                    />
-                  ))}
-                </div>
-
-                <div className="mt-4 text-xs text-white/40">
-                  Dica: agora o convite gera um link real que expira.
-                </div>
-              </div>
-            </section>
-          </>
-        )}
       </main>
-    </div>
-  );
-}
 
-function Summary({ title, value }: { title: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-5">
-      <p className="text-sm text-white/60">{title}</p>
-      <p className="text-xl font-semibold mt-1">{value}</p>
+      {/* MODAL CONVITE */}
+      {inviteGroupId && (
+        <InviteModal
+          groupId={inviteGroupId}
+          onClose={() => setInviteGroupId(null)}
+        />
+      )}
     </div>
   );
 }
@@ -372,28 +261,5 @@ function Step({ icon, text }: { icon: React.ReactNode; text: string }) {
       <div className="text-emerald-400">{icon}</div>
       <span className="text-sm">{text}</span>
     </div>
-  );
-}
-
-function QuickAction({
-  icon,
-  title,
-  subtitle,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  subtitle: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="text-left rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition p-4"
-    >
-      <div className="text-emerald-300">{icon}</div>
-      <div className="mt-3 font-semibold">{title}</div>
-      <div className="mt-1 text-xs text-white/60">{subtitle}</div>
-    </button>
   );
 }
