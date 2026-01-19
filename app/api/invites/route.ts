@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import crypto from "crypto";
 
 function getUserEmail(req: Request) {
   return req.headers.get("x-user-email") || "";
 }
 
 function randomToken() {
-  // token curto e url-safe
-  return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+  // token url-safe forte (evita colisão melhor que Math.random)
+  return crypto.randomBytes(24).toString("base64url");
 }
 
 export async function POST(req: Request) {
@@ -18,12 +19,13 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => ({}));
   const groupId = String(body?.groupId || "");
-  const role = body?.role === "OWNER" ? "OWNER" : "MEMBER";
+  const role = body?.role === "OWNER" ? "OWNER" : body?.role === "ADMIN" ? "ADMIN" : "MEMBER";
 
   if (!groupId) {
     return NextResponse.json({ error: "groupId obrigatório" }, { status: 400 });
   }
 
+  // garante user
   const user = await prisma.user.upsert({
     where: { email },
     update: {},
@@ -33,6 +35,7 @@ export async function POST(req: Request) {
   // confirma se é dono do grupo
   const group = await prisma.group.findUnique({ where: { id: groupId } });
   if (!group) return NextResponse.json({ error: "Grupo não encontrado" }, { status: 404 });
+
   if (group.ownerId !== user.id) {
     return NextResponse.json({ error: "Apenas o dono pode convidar" }, { status: 403 });
   }
@@ -50,11 +53,15 @@ export async function POST(req: Request) {
     },
   });
 
-  const origin =
-    typeof req.headers.get("origin") === "string" && req.headers.get("origin")
-      ? req.headers.get("origin")!
-      : "https://acerto.site";
-
+  const origin = req.headers.get("origin") || "https://acerto.site";
   const link = `${origin}/invite/${invite.token}`;
-  return NextResponse.json({ invite, link });
+
+  // ✅ Compat: devolve token/expiresAt no topo (frontend antigo usa data.token)
+  return NextResponse.json({
+    ok: true,
+    token: invite.token,
+    expiresAt: invite.expiresAt,
+    link,
+    invite,
+  });
 }
