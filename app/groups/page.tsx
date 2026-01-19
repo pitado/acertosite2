@@ -130,9 +130,7 @@ export default function GroupsPage() {
         <section className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold">{firstName}</h2>
-            <p className="text-sm text-white/60 mt-1">
-              Organize despesas sem dor de cabeça.
-            </p>
+            <p className="text-sm text-white/60 mt-1">Organize despesas sem dor de cabeça.</p>
           </div>
 
           {hasGroups ? (
@@ -201,10 +199,7 @@ export default function GroupsPage() {
 
               <div className="mt-4 space-y-3 max-h-[520px] overflow-auto pr-1">
                 {groups.map((g) => (
-                  <div
-                    key={g.id}
-                    className="rounded-2xl border border-white/10 bg-white/5 p-4"
-                  >
+                  <div key={g.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <h4 className="font-semibold truncate">{g.name}</h4>
@@ -246,10 +241,7 @@ export default function GroupsPage() {
 
       {/* MODAL: CRIAR GRUPO */}
       {createOpen && (
-        <CreateGroupModal
-          onClose={() => setCreateOpen(false)}
-          onCreated={loadGroups}
-        />
+        <CreateGroupModal onClose={() => setCreateOpen(false)} onCreated={loadGroups} />
       )}
 
       {/* MODAL: GRUPO */}
@@ -262,9 +254,7 @@ export default function GroupsPage() {
       )}
 
       {/* MODAL: CONVITE */}
-      {inviteGroupId && (
-        <InviteModal groupId={inviteGroupId} onClose={() => setInviteGroupId(null)} />
-      )}
+      {inviteGroupId && <InviteModal groupId={inviteGroupId} onClose={() => setInviteGroupId(null)} />}
     </div>
   );
 }
