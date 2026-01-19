@@ -1,10 +1,22 @@
 // app/groups/services.ts
 import type { Group, InviteInfo, Member, Expense, ActivityItem } from "./types";
 
+function getEmailFallback(ownerEmail?: string): string {
+  if (ownerEmail) return ownerEmail;
+
+  // services.ts roda no client (GroupsPage/Modals).
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("acerto_email") || "";
+  }
+
+  return "";
+}
+
 function authHeaders(ownerEmail?: string): Record<string, string> {
-  // sempre retorna Record<string,string> (nunca undefined) -> evita erro do fetch
-  if (!ownerEmail) return {};
-  return { "x-user-email": ownerEmail };
+  // Sempre retorna Record<string,string> (nunca undefined) -> evita erro do fetch
+  const email = getEmailFallback(ownerEmail);
+  if (!email) return {};
+  return { "x-user-email": email };
 }
 
 async function handle<T>(res: Response): Promise<T> {
@@ -25,6 +37,49 @@ async function handle<T>(res: Response): Promise<T> {
   return data as T;
 }
 
+// ====== overloads para TS (aceita as 2 formas) ======
+type MarkPaidResult = any;
+
+// Forma nova (que o seu ExpenseRow está usando): (expenseId, paid, paidByEmail?)
+type MarkPaidFn = {
+  (expenseId: string, paid: boolean, paidByEmail?: string, ownerEmail?: string): Promise<MarkPaidResult>;
+  // Forma antiga (se você usar em algum lugar): (expenseId, paidByEmail, paid?, ownerEmail?)
+  (expenseId: string, paidByEmail: string, paid?: boolean, ownerEmail?: string): Promise<MarkPaidResult>;
+};
+
+const markPaid: MarkPaidFn = async (
+  expenseId: string,
+  a2: boolean | string,
+  a3?: boolean | string,
+  a4?: string
+) => {
+  // Se 2º arg é boolean => padrão do front (paid primeiro)
+  if (typeof a2 === "boolean") {
+    const paid = a2;
+    const paidByEmail = typeof a3 === "string" ? a3 : getEmailFallback(a4) || "owner";
+    const ownerEmail = typeof a4 === "string" ? a4 : undefined;
+
+    const res = await fetch(`/api/expenses/${expenseId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...authHeaders(ownerEmail) },
+      body: JSON.stringify({ paidByEmail, paid }),
+    });
+    return await handle(res);
+  }
+
+  // Se 2º arg é string => padrão antigo (paidByEmail primeiro)
+  const paidByEmail = a2;
+  const paid = typeof a3 === "boolean" ? a3 : true;
+  const ownerEmail = typeof a4 === "string" ? a4 : undefined;
+
+  const res = await fetch(`/api/expenses/${expenseId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...authHeaders(ownerEmail) },
+    body: JSON.stringify({ paidByEmail, paid }),
+  });
+  return await handle(res);
+};
+
 export const Services = {
   // =============== GROUPS ===============
   async listGroups(ownerEmail?: string): Promise<Group[]> {
@@ -33,11 +88,7 @@ export const Services = {
     return data.groups;
   },
 
-  async createGroup(
-    name: string,
-    description?: string | null,
-    ownerEmail?: string
-  ): Promise<Group> {
+  async createGroup(name: string, description?: string | null, ownerEmail?: string): Promise<Group> {
     const res = await fetch(`/api/groups`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders(ownerEmail) },
@@ -96,11 +147,7 @@ export const Services = {
     return data.expenses;
   },
 
-  async createExpense(
-    groupId: string,
-    payload: Partial<Expense>,
-    ownerEmail?: string
-  ): Promise<Expense> {
+  async createExpense(groupId: string, payload: Partial<Expense>, ownerEmail?: string): Promise<Expense> {
     const res = await fetch(`/api/groups/${groupId}/expenses`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders(ownerEmail) },
@@ -118,44 +165,8 @@ export const Services = {
     return await handle(res);
   },
 
-  // ✅ CORRIGIDO: aceita os dois formatos:
-  // A) markPaid(expenseId, true, "owner")
-  // B) markPaid(expenseId, "owner@email.com", true)
-  async markPaid(
-    expenseId: string,
-    arg2: boolean | string,
-    arg3: string | boolean,
-    ownerEmail?: string
-  ) {
-    let paidByEmail: string;
-    let paid: boolean;
-
-    if (typeof arg2 === "boolean" && typeof arg3 === "string") {
-      // formato A
-      paid = arg2;
-      paidByEmail = arg3;
-    } else if (typeof arg2 === "string" && typeof arg3 === "boolean") {
-      // formato B
-      paidByEmail = arg2;
-      paid = arg3;
-    } else if (typeof arg2 === "string" && typeof arg3 === "string") {
-      // fallback: arg3 vira "paidBy", paid default true
-      paidByEmail = arg2;
-      paid = true;
-    } else {
-      // fallback seguro
-      paidByEmail = String(arg3);
-      paid = Boolean(arg2);
-    }
-
-    const res = await fetch(`/api/expenses/${expenseId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", ...authHeaders(ownerEmail) },
-      body: JSON.stringify({ paidByEmail, paid }),
-    });
-
-    return await handle(res);
-  },
+  // ✅ agora aceita: markPaid(id, true, "owner") OU markPaid(id, "email@x.com", true)
+  markPaid,
 
   async attachProof(expenseId: string, proofUrl: string, ownerEmail?: string) {
     const res = await fetch(`/api/expenses/${expenseId}`, {
