@@ -44,12 +44,11 @@ export type Expense = {
   title: string;
   amount: number;
 
-  buyer: string;
-  payer: string;
-
+  buyer: string; // quem pagou / quem comprou
+  payer: string; // quem vai receber (ou dono)
   split: string;
-  participants: any;
 
+  participants: any; // pode virar JSON tipado depois
   category: string;
   subcategory?: string | null;
   location?: string | null;
@@ -60,6 +59,7 @@ export type Expense = {
 
   created_at?: string | Date;
 
+  // opcional (se você estiver marcando como pago no front)
   paid?: boolean;
 };
 
@@ -70,8 +70,5 @@ export type ActivityItem = {
   created_at?: string | Date;
 };
 
-// ✅ Compat: alguns componentes usam LogEntry
+// ✅ Compat: alguns componentes importam LogEntry
 export type LogEntry = ActivityItem;
-
-// ✅ também exporto ActivityItem como ActivityLogItem caso apareça em outro lugar
-export type ActivityLogItem = ActivityItem;
