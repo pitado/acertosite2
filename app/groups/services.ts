@@ -5,20 +5,20 @@ function getEmail() {
   return localStorage.getItem("acerto_email") || "";
 }
 
-function authHeaders() {
+// ✅ SEM ERRO DE TS: sempre retorna Record<string,string>
+function authHeaders(): Record<string, string> {
   const email = getEmail();
-  return email ? { "x-user-email": email } : {};
+  return email ? { "x-user-email": email } : ({} as Record<string, string>);
 }
 
 async function handle<T>(res: Response): Promise<T> {
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error || "Erro");
+  if (!res.ok) throw new Error((data as any)?.error || "Erro");
   return data as T;
 }
 
 export const Services = {
   async listGroups(ownerEmail?: string): Promise<Group[]> {
-    // compat (mas preferir header)
     const res = await fetch(`/api/groups`, { headers: authHeaders() });
     const data = await handle<{ groups: Group[] }>(res);
     return data.groups;
@@ -40,7 +40,10 @@ export const Services = {
     return data.expenses;
   },
 
-  async createExpense(groupId: string, expense: Omit<Expense, "id" | "group_id" | "created_at">) {
+  async createExpense(
+    groupId: string,
+    expense: Omit<Expense, "id" | "group_id" | "created_at">
+  ) {
     const res = await fetch(`/api/groups/${groupId}/expenses`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -50,6 +53,7 @@ export const Services = {
     return data.expense;
   },
 
+  // ✅ assinatura: (expenseId, paid, by)
   async markPaid(expenseId: string, paid: boolean, by: string) {
     const res = await fetch(`/api/expenses/${expenseId}`, {
       method: "PATCH",
@@ -89,5 +93,15 @@ export const Services = {
     const res = await fetch(`/api/groups/${groupId}/activity`, { headers: authHeaders() });
     const data = await handle<{ activity: LogEntry[] }>(res);
     return data.activity;
+  },
+
+  async createInvite(groupId: string, role: "MEMBER" | "ADMIN" = "MEMBER") {
+    const res = await fetch(`/api/invites`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ groupId, role }),
+    });
+    const data = await handle<{ token?: string; link?: string } & any>(res);
+    return data;
   },
 };
