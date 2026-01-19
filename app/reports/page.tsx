@@ -1,9 +1,252 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, BarChart3, Users, AlertCircle, Wallet } from "lucide-react";
 
+// reaproveita o mesmo Services do /groups
+import { Services } from "../groups/services";
+import type { Expense } from "../groups/types";
+
+type Group = {
+  id: string;
+  name: string;
+  description?: string | null;
+};
+
+function startOfMonth(d = new Date()) {
+  return new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
+}
+
+function sameDayKey(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function parseExpenseDate(e: Expense): Date | null {
+  // no seu schema existe created_at e date_iso (string?)
+  // vamos preferir date_iso se existir
+  const raw: any = (e as any).date_iso || (e as any).created_at || (e as any).createdAt;
+  if (!raw) return null;
+
+  const dt = raw instanceof Date ? raw : new Date(raw);
+  if (Number.isNaN(dt.getTime())) return null;
+  return dt;
+}
+
+function parseParticipants(e: Expense): string[] {
+  const p: any = (e as any).participants;
+
+  // seu GroupModal trata como array (mesmo sendo Json no prisma) :contentReference[oaicite:2]{index=2}
+  if (Array.isArray(p)) {
+    return p.filter(Boolean).map((x) => String(x));
+  }
+
+  // se vier string JSON
+  if (typeof p === "string") {
+    try {
+      const arr = JSON.parse(p);
+      if (Array.isArray(arr)) return arr.filter(Boolean).map((x) => String(x));
+    } catch {}
+  }
+
+  return [];
+}
+
+function computeTransfersForGroup(expenses: Expense[], memberEmails: string[]) {
+  const net: Record<string, number> = {};
+  for (const m of memberEmails) net[m] = 0;
+
+  for (const ex of expenses) {
+    const participants = parseParticipants(ex);
+    if (!participants.length) continue;
+
+    for (const p of participants) if (net[p] === undefined) net[p] = 0;
+
+    const payer = String((ex as any).payer || "");
+    if (payer && net[payer] === undefined) net[payer] = 0;
+
+    const amount = Number((ex as any).amount || 0);
+    if (!amount) continue;
+
+    if (payer) net[payer] += amount;
+
+    const each = amount / participants.length;
+    for (const p of participants) net[p] -= each;
+  }
+
+  for (const k of Object.keys(net)) net[k] = Math.round(net[k] * 100) / 100;
+
+  const creditors = Object.entries(net)
+    .filter(([, v]) => v > 0.009)
+    .map(([who, v]) => ({ who, v }))
+    .sort((a, b) => b.v - a.v);
+
+  const debtors = Object.entries(net)
+    .filter(([, v]) => v < -0.009)
+    .map(([who, v]) => ({ who, v: -v }))
+    .sort((a, b) => b.v - a.v);
+
+  const transfers: { from: string; to: string; amount: number }[] = [];
+  let i = 0,
+    j = 0;
+
+  while (i < debtors.length && j < creditors.length) {
+    const d = debtors[i];
+    const c = creditors[j];
+    const pay = Math.min(d.v, c.v);
+
+    transfers.push({
+      from: d.who,
+      to: c.who,
+      amount: Math.round(pay * 100) / 100,
+    });
+
+    d.v -= pay;
+    c.v -= pay;
+
+    if (d.v <= 0.009) i++;
+    if (c.v <= 0.009) j++;
+  }
+
+  return { net, transfers };
+}
+
 export default function ReportsPage() {
+  const [loading, setLoading] = useState(true);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [expensesByGroup, setExpensesByGroup] = useState<Record<string, Expense[]>>({});
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const gs = await Services.listGroups();
+        setGroups(gs || []);
+
+        // carrega despesas de todos os grupos
+        const entries = await Promise.all(
+          (gs || []).map(async (g) => {
+            try {
+              const ex = await Services.listExpenses(g.id);
+              return [g.id, ex || []] as const;
+            } catch {
+              return [g.id, []] as const;
+            }
+          })
+        );
+
+        const map: Record<string, Expense[]> = {};
+        for (const [gid, ex] of entries) map[gid] = ex;
+        setExpensesByGroup(map);
+      } catch (e: any) {
+        setError(e?.message || "Falha ao carregar relatórios");
+        setGroups([]);
+        setExpensesByGroup({});
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const monthStart = useMemo(() => startOfMonth(new Date()), []);
+
+  const allExpenses = useMemo(() => {
+    return Object.values(expensesByGroup).flat();
+  }, [expensesByGroup]);
+
+  const totalSpentMonth = useMemo(() => {
+    let sum = 0;
+    for (const e of allExpenses) {
+      const dt = parseExpenseDate(e);
+      if (!dt) continue;
+      if (dt >= monthStart) sum += Number((e as any).amount || 0);
+    }
+    return Math.round(sum * 100) / 100;
+  }, [allExpenses, monthStart]);
+
+  const activeGroups = groups.length;
+
+  // “Pendências” aqui é um placeholder útil:
+  // conta despesas do mês onde você está em participants (ou payer)
+  // (quando você tiver o campo paid/settled, dá pra deixar perfeito)
+  const pendingCount = useMemo(() => {
+    const me = (typeof window !== "undefined" ? localStorage.getItem("acerto_email") : "") || "";
+    if (!me) return 0;
+
+    let c = 0;
+    for (const e of allExpenses) {
+      const dt = parseExpenseDate(e);
+      if (!dt || dt < monthStart) continue;
+
+      const payer = String((e as any).payer || "");
+      const participants = parseParticipants(e);
+      if (payer === me || participants.includes(me)) c++;
+    }
+    return c;
+  }, [allExpenses, monthStart]);
+
+  // Ajustes não acertados = soma total de “transfers” sugeridas em todos os grupos
+  const unsettledTransfers = useMemo(() => {
+    let total = 0;
+
+    for (const g of groups) {
+      const ex = expensesByGroup[g.id] || [];
+
+      // pega membros “do jeito fácil”: participants + payer dentro das despesas
+      const memberSet = new Set<string>();
+      for (const e of ex) {
+        const payer = String((e as any).payer || "");
+        if (payer) memberSet.add(payer);
+        for (const p of parseParticipants(e)) memberSet.add(p);
+      }
+
+      const members = Array.from(memberSet);
+      const rep = computeTransfersForGroup(ex, members);
+      total += rep.transfers.length;
+    }
+
+    return total;
+  }, [groups, expensesByGroup]);
+
+  const dailySpentThisMonth = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const e of allExpenses) {
+      const dt = parseExpenseDate(e);
+      if (!dt || dt < monthStart) continue;
+
+      const k = sameDayKey(dt);
+      map[k] = (map[k] || 0) + Number((e as any).amount || 0);
+    }
+
+    return Object.entries(map)
+      .sort(([a], [b]) => (a < b ? -1 : 1))
+      .map(([day, value]) => ({ day, value: Math.round(value * 100) / 100 }));
+  }, [allExpenses, monthStart]);
+
+  const perGroupTotalMonth = useMemo(() => {
+    return groups.map((g) => {
+      const ex = expensesByGroup[g.id] || [];
+      let sum = 0;
+      for (const e of ex) {
+        const dt = parseExpenseDate(e);
+        if (!dt || dt < monthStart) continue;
+        sum += Number((e as any).amount || 0);
+      }
+      sum = Math.round(sum * 100) / 100;
+      return { groupId: g.id, name: g.name, total: sum };
+    });
+  }, [groups, expensesByGroup, monthStart]);
+
+  function formatBRL(v: number) {
+    return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  }
+
   return (
     <div className="min-h-screen bg-[#071611] text-white relative overflow-hidden">
       {/* glow */}
@@ -23,57 +266,97 @@ export default function ReportsPage() {
             Voltar
           </Link>
 
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Relatórios
-          </h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Relatórios</h1>
         </div>
 
         <p className="text-white/60 max-w-2xl mb-8">
-          Aqui você poderá acompanhar gastos, acertos e quem deve ou recebe em
-          cada grupo. Esses dados aparecerão automaticamente quando o banco de
-          dados estiver conectado.
+          Resumo automático com base nos seus grupos e despesas (mês atual).
         </p>
+
+        {error && (
+          <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
+            {error}
+          </div>
+        )}
 
         {/* Cards resumo */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <SummaryCard
             icon={<Wallet className="h-5 w-5 text-emerald-400" />}
             title="Total gasto no mês"
-            value="R$ 0,00"
+            value={loading ? "..." : formatBRL(totalSpentMonth)}
           />
           <SummaryCard
             icon={<Users className="h-5 w-5 text-emerald-400" />}
             title="Grupos ativos"
-            value="0"
+            value={loading ? "..." : String(activeGroups)}
           />
           <SummaryCard
             icon={<AlertCircle className="h-5 w-5 text-emerald-400" />}
             title="Pendências"
-            value="0"
+            value={loading ? "..." : String(pendingCount)}
           />
           <SummaryCard
             icon={<BarChart3 className="h-5 w-5 text-emerald-400" />}
             title="Ajustes não acertados"
-            value="0"
+            value={loading ? "..." : String(unsettledTransfers)}
           />
         </div>
 
-        {/* Gráfico fake */}
+        {/* Evolução */}
         <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
-          <h2 className="font-semibold mb-2">Evolução de gastos</h2>
+          <h2 className="font-semibold mb-2">Evolução de gastos (mês atual)</h2>
           <p className="text-sm text-white/60 mb-4">
-            Em breve você verá gráficos com os gastos ao longo do tempo.
+            Por enquanto em lista (depois dá pra virar gráfico).
           </p>
 
-          <div className="h-40 rounded-xl border border-dashed border-white/10 flex items-center justify-center text-white/40 text-sm">
-            Gráfico aparecerá aqui
-          </div>
+          {loading ? (
+            <div className="text-sm text-white/60">Carregando...</div>
+          ) : dailySpentThisMonth.length ? (
+            <div className="space-y-2">
+              {dailySpentThisMonth.map((d) => (
+                <div
+                  key={d.day}
+                  className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm"
+                >
+                  <span className="text-white/70">{d.day}</span>
+                  <span className="text-emerald-200">{formatBRL(d.value)}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="h-24 rounded-xl border border-dashed border-white/10 flex items-center justify-center text-white/40 text-sm">
+              Sem despesas neste mês ainda.
+            </div>
+          )}
+        </div>
+
+        {/* Por grupo */}
+        <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
+          <h2 className="font-semibold mb-4">Totais por grupo (mês atual)</h2>
+
+          {loading ? (
+            <div className="text-sm text-white/60">Carregando...</div>
+          ) : perGroupTotalMonth.length ? (
+            <div className="space-y-2">
+              {perGroupTotalMonth.map((g) => (
+                <div
+                  key={g.groupId}
+                  className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm"
+                >
+                  <span className="text-white/80">{g.name}</span>
+                  <span className="text-emerald-200">{formatBRL(g.total)}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm text-white/60">Você ainda não tem grupos.</div>
+          )}
         </div>
 
         {/* Aviso */}
         <div className="mt-8 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">
-          💡 Dica: quando o banco estiver conectado, esses relatórios serão
-          atualizados automaticamente com base nos grupos e despesas.
+          💡 Dica: os números acima já vêm do banco via APIs usadas em <b>/groups</b>.
         </div>
       </div>
     </div>
