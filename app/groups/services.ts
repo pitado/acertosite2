@@ -1,115 +1,136 @@
 // app/groups/services.ts
-export type Group = {
-  id: string;
-  name: string;
-  description?: string | null;
-  ownerId?: string;
-  createdAt?: string;
-  updatedAt?: string;
-};
+import type { Group, InviteInfo, Member, Expense, ActivityItem } from "./types";
 
-export type InviteCreateResponse = {
-  invite: {
-    token: string;
-    groupId: string;
-    role: "MEMBER" | "ADMIN" | "OWNER";
-    expiresAt?: string | null;
-    usedAt?: string | null;
-    createdAt?: string;
-  };
-  link: string;
-};
-
-export type ActivityItem = {
-  id: string;
-  message: string;
-  createdAt: string;
-  groupId: string;
-};
-
-function getEmailFromStorage(): string {
-  if (typeof window === "undefined") return "";
-  return localStorage.getItem("acerto_email") || "";
-}
-
-function authHeaders(): Record<string, string> {
-  const email = getEmailFromStorage();
-  // NUNCA retorne header com undefined (isso quebra o build do TS)
-  if (!email) return {};
-  return { "x-user-email": email };
+function authHeaders(ownerEmail?: string): Record<string, string> {
+  // sempre retorna Record<string,string> (nunca undefined) -> evita erro do fetch
+  if (!ownerEmail) return {};
+  return { "x-user-email": ownerEmail };
 }
 
 async function handle<T>(res: Response): Promise<T> {
-  const data = await res.json().catch(() => ({}));
+  const text = await res.text();
+  let data: any = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = text;
+  }
   if (!res.ok) {
-    throw new Error((data as any)?.error || "Erro na requisição");
+    const msg = data?.error || data?.message || `Erro HTTP ${res.status}`;
+    throw new Error(msg);
   }
   return data as T;
 }
 
 export const Services = {
-  async listGroups(): Promise<Group[]> {
-    const res = await fetch(`/api/groups`, { headers: authHeaders() });
+  // =============== GROUPS ===============
+  async listGroups(ownerEmail?: string): Promise<Group[]> {
+    const res = await fetch(`/api/groups`, { headers: authHeaders(ownerEmail) });
     const data = await handle<{ groups: Group[] }>(res);
-    return data.groups || [];
+    return data.groups;
   },
 
-  async createGroup(name: string, description?: string | null): Promise<Group> {
+  async createGroup(name: string, description?: string | null, ownerEmail?: string): Promise<Group> {
     const res = await fetch(`/api/groups`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
-      body: JSON.stringify({ name, description: description ?? null }),
+      headers: { "Content-Type": "application/json", ...authHeaders(ownerEmail) },
+      body: JSON.stringify({ name, description }),
     });
     const data = await handle<{ group: Group }>(res);
     return data.group;
   },
 
+  // =============== INVITES ===============
   async createInvite(
     groupId: string,
-    role: "MEMBER" | "ADMIN"
-  ): Promise<InviteCreateResponse> {
+    role: "ADMIN" | "MEMBER",
+    ownerEmail?: string
+  ): Promise<{ invite: any; link: string }> {
     const res = await fetch(`/api/invites`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
+      headers: { "Content-Type": "application/json", ...authHeaders(ownerEmail) },
       body: JSON.stringify({ groupId, role }),
     });
-    return handle<InviteCreateResponse>(res);
+    return await handle(res);
   },
 
-  async getInvite(token: string) {
-    const res = await fetch(`/api/invites/${token}`, { headers: authHeaders() });
-    return handle<{
-      invite: {
-        token: string;
-        groupId: string;
-        role: "MEMBER" | "ADMIN" | "OWNER";
-        expiresAt?: string | null;
-        usedAt?: string | null;
-        group?: { id: string; name: string; description?: string | null };
-        createdBy?: { email?: string | null };
-      };
-    }>(res);
+  async getInvite(token: string, ownerEmail?: string): Promise<InviteInfo> {
+    const res = await fetch(`/api/invites/${token}`, { headers: authHeaders(ownerEmail) });
+    return await handle(res);
   },
 
-  async acceptInvite(token: string) {
+  async acceptInvite(token: string, ownerEmail?: string): Promise<any> {
     const res = await fetch(`/api/invites/${token}/accept`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
+      headers: { "Content-Type": "application/json", ...authHeaders(ownerEmail) },
     });
-    return handle<{ ok: true; groupId: string }>(res);
+    return await handle(res);
   },
 
-  async declineInvite(token: string) {
+  async declineInvite(token: string, ownerEmail?: string): Promise<any> {
     const res = await fetch(`/api/invites/${token}/decline`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
+      headers: { "Content-Type": "application/json", ...authHeaders(ownerEmail) },
     });
-    return handle<{ ok: true }>(res);
+    return await handle(res);
   },
 
-  async groupActivity(groupId: string): Promise<ActivityItem[]> {
-    const res = await fetch(`/api/groups/${groupId}/activity`, { headers: authHeaders() });
-    const data = await handle<{ items: ActivityItem[] }>(res);
-    return data.items || [];
+  // =============== MEMBERS ===============
+  async listMembers(groupId: string, ownerEmail?: string): Promise<Member[]> {
+    const res = await fetch(`/api/groups/${groupId}/members`, { headers: authHeaders(ownerEmail) });
+    const data = await handle<{ members: Member[] }>(res);
+    return data.members;
+  },
+
+  // =============== EXPENSES ===============
+  async listExpenses(groupId: string, ownerEmail?: string): Promise<Expense[]> {
+    const res = await fetch(`/api/groups/${groupId}/expenses`, { headers: authHeaders(ownerEmail) });
+    const data = await handle<{ expenses: Expense[] }>(res);
+    return data.expenses;
+  },
+
+  async createExpense(groupId: string, payload: Partial<Expense>, ownerEmail?: string): Promise<Expense> {
+    const res = await fetch(`/api/groups/${groupId}/expenses`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders(ownerEmail) },
+      body: JSON.stringify(payload),
+    });
+    const data = await handle<{ expense: Expense }>(res);
+    return data.expense;
+  },
+
+  // ✅ FIX DO SEU ERRO: agora existe removeExpense
+  async removeExpense(expenseId: string, ownerEmail?: string): Promise<{ ok: true }> {
+    const res = await fetch(`/api/expenses/${expenseId}`, {
+      method: "DELETE",
+      headers: authHeaders(ownerEmail),
+    });
+    return await handle(res);
+  },
+
+  // marca pago (mantém compatível: 2 args OK, 3 args também OK)
+  async markPaid(expenseId: string, paidByEmail: string, paid: boolean = true, ownerEmail?: string) {
+    const res = await fetch(`/api/expenses/${expenseId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...authHeaders(ownerEmail) },
+      body: JSON.stringify({ paidByEmail, paid }),
+    });
+    return await handle(res);
+  },
+
+  async attachProof(expenseId: string, proofUrl: string, ownerEmail?: string) {
+    const res = await fetch(`/api/expenses/${expenseId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...authHeaders(ownerEmail) },
+      body: JSON.stringify({ proof_url: proofUrl }),
+    });
+    return await handle(res);
+  },
+
+  // =============== ACTIVITY ===============
+  async listActivity(groupId: string, ownerEmail?: string): Promise<ActivityItem[]> {
+    const res = await fetch(`/api/groups/${groupId}/activity`, { headers: authHeaders(ownerEmail) });
+    const data = await handle<{ activity: ActivityItem[] }>(res);
+    return data.activity;
   },
 };
