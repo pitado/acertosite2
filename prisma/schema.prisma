@@ -14,21 +14,25 @@ enum Role {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
+  id        String  @id @default(cuid())
+  email     String  @unique
   name      String?
   avatarUrl String?
 
   createdAt DateTime @default(now())
-  updatedAt DateTime? // ✅ AGORA OPCIONAL (corrige o erro)
+  // ✅ evita erro em db push quando já existem linhas
+  updatedAt DateTime @default(now()) @updatedAt
 
-  ownedGroups Group[] @relation("UserOwnedGroups")
-  memberships GroupMember[]
-  invitesCreated Invite[] @relation("InviteCreator")
+  // Relações
+  ownedGroups    Group[]       @relation("UserOwnedGroups")
+  memberships    GroupMember[]
+  invitesCreated Invite[]      @relation("InviteCreator")
+
+  @@map("users")
 }
 
 model Group {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
   description String?
 
@@ -36,12 +40,15 @@ model Group {
   owner   User @relation("UserOwnedGroups", fields: [ownerId], references: [id])
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 
   members  GroupMember[]
   invites  Invite[]
   expenses Expense[]
   activity LogEntry[]
+
+  // ✅ tabela com nome “normal” no MySQL (evita erro do GROUP)
+  @@map("groups")
 }
 
 model GroupMember {
@@ -57,14 +64,19 @@ model GroupMember {
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([groupId, userId], name: "groupId_userId")
+  @@index([groupId])
+  @@index([userId])
+
+  @@map("group_members")
 }
 
 model Invite {
-  token String @id @default(cuid())
+  token String @id
 
   groupId String
   group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
+  // opcional: se quiser convite por email específico no futuro
   email String?
 
   role Role @default(MEMBER)
@@ -76,6 +88,11 @@ model Invite {
 
   createdById String?
   createdBy   User? @relation("InviteCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([groupId])
+  @@index([createdById])
+
+  @@map("invites")
 }
 
 model Expense {
@@ -90,6 +107,7 @@ model Expense {
   buyer String
   payer String
 
+  // split (texto livre por enquanto)
   split        String
   participants Json
 
@@ -102,6 +120,10 @@ model Expense {
   proof_url String?
 
   created_at DateTime @default(now())
+
+  @@index([groupId])
+
+  @@map("expenses")
 }
 
 model LogEntry {
@@ -112,4 +134,8 @@ model LogEntry {
 
   message String
   created_at DateTime @default(now())
+
+  @@index([groupId])
+
+  @@map("log_entries")
 }
