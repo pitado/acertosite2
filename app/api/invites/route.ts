@@ -1,5 +1,3 @@
-export const dynamic = "force-dynamic";
-
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -11,20 +9,13 @@ function getUserEmail(req: Request) {
 }
 
 function randomToken() {
-  // token url-safe
-  return (
-    Math.random().toString(36).slice(2) +
-    Math.random().toString(36).slice(2)
-  );
+  return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
 }
 
 export async function POST(req: Request) {
   const email = getUserEmail(req);
   if (!email) {
-    return NextResponse.json(
-      { error: "Sem usuário (x-user-email)" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Sem usuário (x-user-email)" }, { status: 401 });
   }
 
   const body = await req.json().catch(() => null);
@@ -40,18 +31,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "groupId obrigatório" }, { status: 400 });
   }
 
-  // garante user
   const user = await prisma.user.upsert({
     where: { email },
     update: {},
     create: { email },
   });
 
-  // confirma se é dono do grupo
   const group = await prisma.group.findUnique({ where: { id: groupId } });
-  if (!group) {
-    return NextResponse.json({ error: "Grupo não encontrado" }, { status: 404 });
-  }
+  if (!group) return NextResponse.json({ error: "Grupo não encontrado" }, { status: 404 });
   if (group.ownerId !== user.id) {
     return NextResponse.json({ error: "Apenas o dono pode convidar" }, { status: 403 });
   }
@@ -77,19 +64,18 @@ export async function POST(req: Request) {
     },
   });
 
-  // Origem correta (Vercel/preview/prod)
-  const origin =
-    req.headers.get("x-forwarded-host")
-      ? `${req.headers.get("x-forwarded-proto") || "https"}://${req.headers.get("x-forwarded-host")}`
-      : req.headers.get("origin") || "https://acerto.site";
+  const forwardedHost = req.headers.get("x-forwarded-host");
+  const forwardedProto = req.headers.get("x-forwarded-proto") || "https";
+
+  const origin = forwardedHost
+    ? `${forwardedProto}://${forwardedHost}`
+    : req.headers.get("origin") || "https://acerto.site";
 
   const link = `${origin}/invite/${invite.token}`;
 
   return NextResponse.json({ invite, link });
 }
 
-// (Opcional) Se alguém bater GET aqui, retorna 405 de forma explícita
 export async function GET() {
   return NextResponse.json({ error: "Method Not Allowed" }, { status: 405 });
 }
-
