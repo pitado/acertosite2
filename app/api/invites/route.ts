@@ -47,13 +47,7 @@ export async function POST(req: Request) {
   const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24); // 24h
 
   const invite = await prisma.invite.create({
-    data: {
-      groupId,
-      token,
-      role,
-      expiresAt,
-      createdById: user.id,
-    },
+    data: { groupId, token, role, expiresAt, createdById: user.id },
     select: {
       token: true,
       groupId: true,
