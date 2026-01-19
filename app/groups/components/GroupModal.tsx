@@ -11,9 +11,11 @@ type View = "home" | "expenses" | "members" | "reports" | "activity";
 export default function GroupModal({
   group,
   onClose,
+  onInvite,
 }: {
   group: { id: string; name: string };
   onClose: () => void;
+  onInvite?: (groupId: string) => void; // ✅ NOVO
 }) {
   const [view, setView] = useState<View>("home");
 
@@ -240,7 +242,6 @@ export default function GroupModal({
                 </div>
               )}
 
-              {/* ✅ ExpenseModal é named export e precisa da prop open */}
               <ExpenseModal
                 open={showExpenseModal}
                 members={memberEmails.length ? memberEmails : ["você"]}
@@ -252,7 +253,20 @@ export default function GroupModal({
 
           {view === "members" && (
             <>
-              <div className="mb-3 text-base font-semibold">Membros</div>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="text-base font-semibold">Membros</div>
+
+                {/* ✅ botão só aparece se a page passar a função */}
+                {onInvite && (
+                  <button
+                    onClick={() => onInvite(group.id)}
+                    className="rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 text-sm text-white/80 transition"
+                  >
+                    + Convidar
+                  </button>
+                )}
+              </div>
+
               {loading ? (
                 <div className="text-sm text-white/60">Carregando membros...</div>
               ) : (
