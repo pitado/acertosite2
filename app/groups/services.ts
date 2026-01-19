@@ -1,186 +1,134 @@
 // app/groups/services.ts
-import type { Group, InviteInfo, Member, Expense, ActivityItem } from "./types";
+import type { Group, InviteInfo, Member, Expense, ActivityItem, Role } from "./types";
 
 function getEmailFallback(ownerEmail?: string): string {
   if (ownerEmail) return ownerEmail;
-
-  // services.ts roda no client (GroupsPage/Modals).
-  if (typeof window !== "undefined") {
-    return localStorage.getItem("acerto_email") || "";
-  }
-
-  return "";
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem("acerto_email") || "";
 }
 
 function authHeaders(ownerEmail?: string): Record<string, string> {
-  // Sempre retorna Record<string,string> (nunca undefined) -> evita erro do fetch
   const email = getEmailFallback(ownerEmail);
-  if (!email) return {};
-  return { "x-user-email": email };
+  const headers: Record<string, string> = {};
+  if (email) headers["x-user-email"] = email;
+  return headers;
 }
 
 async function handle<T>(res: Response): Promise<T> {
-  const text = await res.text();
-  let data: any = null;
-
-  try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = text;
-  }
-
+  const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const msg = data?.error || data?.message || `Erro HTTP ${res.status}`;
-    throw new Error(msg);
+    const msg =
+      (data && (data.error || data.message)) ||
+      `Erro HTTP ${res.status}`;
+    throw new Error(String(msg));
   }
-
   return data as T;
 }
 
-// ====== overloads para TS (aceita as 2 formas) ======
-type MarkPaidResult = any;
-
-// Forma nova (que o seu ExpenseRow está usando): (expenseId, paid, paidByEmail?)
-type MarkPaidFn = {
-  (expenseId: string, paid: boolean, paidByEmail?: string, ownerEmail?: string): Promise<MarkPaidResult>;
-  // Forma antiga (se você usar em algum lugar): (expenseId, paidByEmail, paid?, ownerEmail?)
-  (expenseId: string, paidByEmail: string, paid?: boolean, ownerEmail?: string): Promise<MarkPaidResult>;
-};
-
-const markPaid: MarkPaidFn = async (
-  expenseId: string,
-  a2: boolean | string,
-  a3?: boolean | string,
-  a4?: string
-) => {
-  // Se 2º arg é boolean => padrão do front (paid primeiro)
-  if (typeof a2 === "boolean") {
-    const paid = a2;
-    const paidByEmail = typeof a3 === "string" ? a3 : getEmailFallback(a4) || "owner";
-    const ownerEmail = typeof a4 === "string" ? a4 : undefined;
-
-    const res = await fetch(`/api/expenses/${expenseId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", ...authHeaders(ownerEmail) },
-      body: JSON.stringify({ paidByEmail, paid }),
-    });
-    return await handle(res);
-  }
-
-  // Se 2º arg é string => padrão antigo (paidByEmail primeiro)
-  const paidByEmail = a2;
-  const paid = typeof a3 === "boolean" ? a3 : true;
-  const ownerEmail = typeof a4 === "string" ? a4 : undefined;
-
-  const res = await fetch(`/api/expenses/${expenseId}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json", ...authHeaders(ownerEmail) },
-    body: JSON.stringify({ paidByEmail, paid }),
-  });
-  return await handle(res);
-};
-
 export const Services = {
-  // =============== GROUPS ===============
+  // ============ GROUPS ============
   async listGroups(ownerEmail?: string): Promise<Group[]> {
     const res = await fetch(`/api/groups`, { headers: authHeaders(ownerEmail) });
     const data = await handle<{ groups: Group[] }>(res);
-    return data.groups;
+    return data.groups || [];
   },
 
   async createGroup(name: string, description?: string | null, ownerEmail?: string): Promise<Group> {
     const res = await fetch(`/api/groups`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders(ownerEmail) },
+      headers: { ...authHeaders(ownerEmail), "content-type": "application/json" },
       body: JSON.stringify({ name, description }),
     });
     const data = await handle<{ group: Group }>(res);
     return data.group;
   },
 
-  // =============== INVITES ===============
-  async createInvite(
-    groupId: string,
-    role: "ADMIN" | "MEMBER",
-    ownerEmail?: string
-  ): Promise<{ invite: any; link: string }> {
+  // (opcional) detalhes do grupo — se existir sua rota
+  async getGroup(groupId: string, ownerEmail?: string): Promise<Group> {
+    const res = await fetch(`/api/groups/${groupId}`, { headers: authHeaders(ownerEmail) });
+    const data = await handle<{ group: Group }>(res);
+    return data.group;
+  },
+
+  // ============ INVITES ============
+  async createInvite(groupId: string, role: Role = "MEMBER", ownerEmail?: string): Promise<{ invite: InviteInfo; link: string }> {
     const res = await fetch(`/api/invites`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders(ownerEmail) },
+      headers: { ...authHeaders(ownerEmail), "content-type": "application/json" },
       body: JSON.stringify({ groupId, role }),
     });
-    return await handle(res);
+    return handle<{ invite: InviteInfo; link: string }>(res);
   },
 
   async getInvite(token: string, ownerEmail?: string): Promise<InviteInfo> {
     const res = await fetch(`/api/invites/${token}`, { headers: authHeaders(ownerEmail) });
-    return await handle(res);
+    const data = await handle<{ invite: InviteInfo }>(res);
+    return data.invite;
   },
 
-  async acceptInvite(token: string, ownerEmail?: string): Promise<any> {
+  async acceptInvite(token: string, ownerEmail?: string): Promise<{ ok: true }> {
     const res = await fetch(`/api/invites/${token}/accept`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders(ownerEmail) },
+      headers: authHeaders(ownerEmail),
     });
-    return await handle(res);
+    return handle<{ ok: true }>(res);
   },
 
-  async declineInvite(token: string, ownerEmail?: string): Promise<any> {
+  async declineInvite(token: string, ownerEmail?: string): Promise<{ ok: true }> {
     const res = await fetch(`/api/invites/${token}/decline`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders(ownerEmail) },
+      headers: authHeaders(ownerEmail),
     });
-    return await handle(res);
+    return handle<{ ok: true }>(res);
   },
 
-  // =============== MEMBERS ===============
+  // ============ MEMBERS (opcional, se existir rota) ============
   async listMembers(groupId: string, ownerEmail?: string): Promise<Member[]> {
     const res = await fetch(`/api/groups/${groupId}/members`, { headers: authHeaders(ownerEmail) });
     const data = await handle<{ members: Member[] }>(res);
-    return data.members;
+    return data.members || [];
   },
 
-  // =============== EXPENSES ===============
+  // ============ EXPENSES (pra não quebrar o build) ============
   async listExpenses(groupId: string, ownerEmail?: string): Promise<Expense[]> {
     const res = await fetch(`/api/groups/${groupId}/expenses`, { headers: authHeaders(ownerEmail) });
     const data = await handle<{ expenses: Expense[] }>(res);
-    return data.expenses;
+    return data.expenses || [];
   },
 
-  async createExpense(groupId: string, payload: Partial<Expense>, ownerEmail?: string): Promise<Expense> {
+  async addExpense(groupId: string, expense: Partial<Expense>, ownerEmail?: string): Promise<Expense> {
     const res = await fetch(`/api/groups/${groupId}/expenses`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders(ownerEmail) },
-      body: JSON.stringify(payload),
+      headers: { ...authHeaders(ownerEmail), "content-type": "application/json" },
+      body: JSON.stringify(expense),
     });
     const data = await handle<{ expense: Expense }>(res);
     return data.expense;
   },
 
+  // ✅ isso resolve seu erro "removeExpense não existe"
   async removeExpense(expenseId: string, ownerEmail?: string): Promise<{ ok: true }> {
     const res = await fetch(`/api/expenses/${expenseId}`, {
       method: "DELETE",
       headers: authHeaders(ownerEmail),
     });
-    return await handle(res);
+    return handle<{ ok: true }>(res);
   },
 
-  // ✅ agora aceita: markPaid(id, true, "owner") OU markPaid(id, "email@x.com", true)
-  markPaid,
-
-  async attachProof(expenseId: string, proofUrl: string, ownerEmail?: string) {
-    const res = await fetch(`/api/expenses/${expenseId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", ...authHeaders(ownerEmail) },
-      body: JSON.stringify({ proof_url: proofUrl }),
+  // ✅ deixa assinatura EXATAMENTE (expenseId, paid, by) pra não dar erro de boolean/string
+  async markPaid(expenseId: string, paid: boolean, by: string, ownerEmail?: string): Promise<{ ok: true }> {
+    const res = await fetch(`/api/expenses/${expenseId}/paid`, {
+      method: "POST",
+      headers: { ...authHeaders(ownerEmail), "content-type": "application/json" },
+      body: JSON.stringify({ paid, by }),
     });
-    return await handle(res);
+    return handle<{ ok: true }>(res);
   },
 
-  // =============== ACTIVITY ===============
+  // ============ ACTIVITY ============
   async listActivity(groupId: string, ownerEmail?: string): Promise<ActivityItem[]> {
     const res = await fetch(`/api/groups/${groupId}/activity`, { headers: authHeaders(ownerEmail) });
     const data = await handle<{ activity: ActivityItem[] }>(res);
-    return data.activity;
+    return data.activity || [];
   },
 };
