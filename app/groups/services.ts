@@ -17,9 +17,7 @@ function authHeaders(ownerEmail?: string): Record<string, string> {
 async function handle<T>(res: Response): Promise<T> {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const msg =
-      (data && (data.error || data.message)) ||
-      `Erro HTTP ${res.status}`;
+    const msg = (data && (data.error || data.message)) || `Erro HTTP ${res.status}`;
     throw new Error(String(msg));
   }
   return data as T;
@@ -51,7 +49,11 @@ export const Services = {
   },
 
   // ============ INVITES ============
-  async createInvite(groupId: string, role: Role = "MEMBER", ownerEmail?: string): Promise<{ invite: InviteInfo; link: string }> {
+  async createInvite(
+    groupId: string,
+    role: Role = "MEMBER",
+    ownerEmail?: string
+  ): Promise<{ invite: InviteInfo; link: string }> {
     const res = await fetch(`/api/invites`, {
       method: "POST",
       headers: { ...authHeaders(ownerEmail), "content-type": "application/json" },
@@ -89,13 +91,14 @@ export const Services = {
     return data.members || [];
   },
 
-  // ============ EXPENSES (pra não quebrar o build) ============
+  // ============ EXPENSES ============
   async listExpenses(groupId: string, ownerEmail?: string): Promise<Expense[]> {
     const res = await fetch(`/api/groups/${groupId}/expenses`, { headers: authHeaders(ownerEmail) });
     const data = await handle<{ expenses: Expense[] }>(res);
     return data.expenses || [];
   },
 
+  // nome "addExpense" (interno)
   async addExpense(groupId: string, expense: Partial<Expense>, ownerEmail?: string): Promise<Expense> {
     const res = await fetch(`/api/groups/${groupId}/expenses`, {
       method: "POST",
@@ -106,7 +109,17 @@ export const Services = {
     return data.expense;
   },
 
-  // ✅ isso resolve seu erro "removeExpense não existe"
+  // ✅ alias para não quebrar o GroupModal (ele chama createExpense)
+  async createExpense(groupId: string, expense: Partial<Expense>, ownerEmail?: string): Promise<Expense> {
+    const res = await fetch(`/api/groups/${groupId}/expenses`, {
+      method: "POST",
+      headers: { ...authHeaders(ownerEmail), "content-type": "application/json" },
+      body: JSON.stringify(expense),
+    });
+    const data = await handle<{ expense: Expense }>(res);
+    return data.expense;
+  },
+
   async removeExpense(expenseId: string, ownerEmail?: string): Promise<{ ok: true }> {
     const res = await fetch(`/api/expenses/${expenseId}`, {
       method: "DELETE",
@@ -115,12 +128,22 @@ export const Services = {
     return handle<{ ok: true }>(res);
   },
 
-  // ✅ deixa assinatura EXATAMENTE (expenseId, paid, by) pra não dar erro de boolean/string
+  // ✅ assinatura EXATA (expenseId, paid, by)
   async markPaid(expenseId: string, paid: boolean, by: string, ownerEmail?: string): Promise<{ ok: true }> {
     const res = await fetch(`/api/expenses/${expenseId}/paid`, {
       method: "POST",
       headers: { ...authHeaders(ownerEmail), "content-type": "application/json" },
       body: JSON.stringify({ paid, by }),
+    });
+    return handle<{ ok: true }>(res);
+  },
+
+  // ✅ usado no ExpenseRow (upload de comprovante)
+  async attachProof(expenseId: string, proofUrl: string, ownerEmail?: string): Promise<{ ok: true }> {
+    const res = await fetch(`/api/expenses/${expenseId}/proof`, {
+      method: "POST",
+      headers: { ...authHeaders(ownerEmail), "content-type": "application/json" },
+      body: JSON.stringify({ proofUrl }),
     });
     return handle<{ ok: true }>(res);
   },
