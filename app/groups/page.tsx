@@ -102,7 +102,6 @@ export default function GroupsPage() {
           try {
             const ex = (await Services.listExpenses(g.id)) || [];
 
-            // ordena por data desc
             const sorted = [...ex].sort((a, b) => {
               const da = parseExpenseDate(a)?.getTime() ?? 0;
               const db = parseExpenseDate(b)?.getTime() ?? 0;
@@ -288,105 +287,115 @@ export default function GroupsPage() {
                     return (
                       <div
                         key={g.id}
-                        className="group relative rounded-3xl border border-white/10 bg-white/[0.06] hover:bg-white/[0.08] transition overflow-hidden"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSelectedGroup(g)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") setSelectedGroup(g);
+                        }}
+                        className="group relative rounded-3xl border border-white/10 bg-white/[0.06] hover:bg-white/[0.08] transition overflow-hidden cursor-pointer"
                       >
-                        {/* overlay clicável */}
-                        <button
-                          onClick={() => setSelectedGroup(g)}
-                          className="absolute inset-0 z-[1] cursor-pointer"
-                          aria-label={`Abrir grupo ${g.name}`}
-                        />
-
                         {/* brilho sutil */}
-                        <div className="pointer-events-none absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition">
+                        <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition">
                           <div className="absolute -top-24 -right-24 h-56 w-56 rounded-full bg-emerald-500/10 blur-3xl" />
                           <div className="absolute -bottom-24 -left-24 h-56 w-56 rounded-full bg-teal-400/10 blur-3xl" />
                         </div>
 
-                        <div className="relative z-[2] p-5">
-                          {/* topo */}
+                        <div className="relative p-5">
+                          {/* header do card */}
                           <div className="flex items-start gap-4">
                             <div className="h-12 w-12 rounded-2xl bg-emerald-500/15 border border-emerald-400/20 flex items-center justify-center shrink-0">
                               <Users className="h-5 w-5 text-emerald-300" />
                             </div>
 
                             <div className="min-w-0 flex-1">
-                              <h4 className="text-lg font-semibold truncate">{g.name}</h4>
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-lg font-semibold truncate">{g.name}</h4>
+                                <span className="hidden sm:inline-flex items-center rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[11px] text-white/60">
+                                  ID {g.id.slice(0, 6)}…
+                                </span>
+                              </div>
+
                               <p className="text-sm text-white/60 mt-1 line-clamp-2">
                                 {g.description?.trim() ? g.description : "Sem descrição"}
                               </p>
+                            </div>
 
-                              {/* chips */}
-                              <div className="mt-3 flex flex-wrap gap-2">
-                                <span className="inline-flex items-center rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] text-white/70">
-                                  Total mês:{" "}
-                                  <b className="ml-1 text-emerald-200">
-                                    {pv ? formatBRL(pv.monthTotal) : "—"}
-                                  </b>
-                                </span>
+                            <button
+                              className="shrink-0 inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition text-sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedGroup(g);
+                              }}
+                            >
+                              Abrir
+                              <ChevronRight className="h-4 w-4" />
+                            </button>
+                          </div>
 
-                                <span className="inline-flex items-center rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] text-white/70">
-                                  Despesas:{" "}
-                                  <b className="ml-1 text-white/90">{pv ? pv.expenseCount : "—"}</b>
-                                </span>
-
-                                <span className="inline-flex items-center rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] text-white/70">
-                                  Atualizado:{" "}
-                                  <b className="ml-1 text-white/90">
-                                    {pv?.lastAt ? pv.lastAt.toLocaleDateString() : "—"}
-                                  </b>
-                                </span>
+                          {/* stats */}
+                          <div className="mt-4 grid grid-cols-3 gap-2">
+                            <div className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
+                              <div className="text-[11px] text-white/50">Total mês</div>
+                              <div className="text-sm font-semibold text-emerald-200">
+                                {pv ? formatBRL(pv.monthTotal) : "—"}
                               </div>
                             </div>
 
-                            <div className="shrink-0 flex items-center gap-2">
-                              <button
-                                className="relative z-[3] inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition text-sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedGroup(g);
-                                }}
-                              >
-                                Abrir
-                                <ChevronRight className="h-4 w-4" />
-                              </button>
+                            <div className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
+                              <div className="text-[11px] text-white/50">Despesas</div>
+                              <div className="text-sm font-semibold text-white/85">
+                                {pv ? pv.expenseCount : "—"}
+                              </div>
+                            </div>
+
+                            <div className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
+                              <div className="text-[11px] text-white/50">Atualizado</div>
+                              <div className="text-sm font-semibold text-white/85">
+                                {pv?.lastAt ? pv.lastAt.toLocaleDateString() : "—"}
+                              </div>
                             </div>
                           </div>
 
-                          {/* preview despesas */}
-                          <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
+                          {/* últimas despesas (mais clean) */}
+                          <div className="mt-4">
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-medium text-white/80">Últimas despesas</span>
-                              <span className="text-xs text-white/50">
-                                {previewsLoading ? "carregando..." : ""}
-                              </span>
+                              {previewsLoading && (
+                                <span className="text-xs text-white/40">carregando...</span>
+                              )}
                             </div>
 
                             {!pv?.lastExpenses?.length ? (
-                              <div className="mt-3 text-sm text-white/50">
+                              <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 px-3 py-3 text-sm text-white/50">
                                 Nenhuma despesa ainda.
                               </div>
                             ) : (
                               <div className="mt-3 space-y-2">
-                                {pv.lastExpenses.map((e: any) => (
-                                  <div
-                                    key={e.id}
-                                    className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-                                  >
-                                    <div className="min-w-0">
-                                      <div className="truncate text-white/85">
-                                        {String(e.title || "Despesa")}
-                                      </div>
-                                      <div className="text-xs text-white/50">
-                                        {parseExpenseDate(e)?.toLocaleDateString() || ""}
-                                        {e.payer ? ` • ${String(e.payer)}` : ""}
+                                {pv.lastExpenses.map((e: any) => {
+                                  const dt = parseExpenseDate(e);
+                                  return (
+                                    <div
+                                      key={e.id}
+                                      className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5"
+                                    >
+                                      <div className="flex items-start justify-between gap-3">
+                                        <div className="min-w-0">
+                                          <div className="truncate text-sm font-medium text-white/85">
+                                            {String(e.title || "Despesa")}
+                                          </div>
+                                          <div className="mt-0.5 text-[12px] text-white/45 truncate">
+                                            {dt ? dt.toLocaleDateString() : ""}
+                                            {e.payer ? ` • ${String(e.payer)}` : ""}
+                                          </div>
+                                        </div>
+                                        <div className="shrink-0 text-sm font-semibold text-emerald-200">
+                                          {formatBRL(Number(e.amount || 0))}
+                                        </div>
                                       </div>
                                     </div>
-                                    <div className="shrink-0 font-semibold text-emerald-200">
-                                      {formatBRL(Number(e.amount || 0))}
-                                    </div>
-                                  </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                             )}
                           </div>
@@ -394,7 +403,7 @@ export default function GroupsPage() {
                           {/* ações */}
                           <div className="mt-4 grid grid-cols-2 gap-2">
                             <button
-                              className="relative z-[3] rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 py-2.5 text-sm transition"
+                              className="rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 py-2.5 text-sm transition"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setInviteGroupId(g.id);
@@ -404,7 +413,7 @@ export default function GroupsPage() {
                             </button>
 
                             <button
-                              className="relative z-[3] rounded-xl bg-emerald-500 text-black py-2.5 text-sm font-semibold hover:bg-emerald-400 transition"
+                              className="rounded-xl bg-emerald-500 text-black py-2.5 text-sm font-semibold hover:bg-emerald-400 transition"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setSelectedGroup(g);
