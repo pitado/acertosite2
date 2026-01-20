@@ -136,7 +136,7 @@ export default function ReportsPage() {
               const ex = await Services.listExpenses(g.id);
               return [g.id, ex || []] as const;
             } catch {
-              return [g.id, []] as const;
+return [g.id, [] as Expense[]] as const;
             }
           })
         );
