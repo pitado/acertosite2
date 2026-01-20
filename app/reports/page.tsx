@@ -430,14 +430,7 @@ export default function ReportsPage() {
           )}
         </div>
 
-        {/* Aviso */}
-        <div className="mt-8 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">
-          💡 Dica: os números acima já vêm do banco via APIs usadas em <b>/groups</b>.
-        </div>
-      </div>
-    </div>
-  );
-}
+       
 
 function SummaryCard({
   icon,
