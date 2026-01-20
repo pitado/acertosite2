@@ -428,10 +428,7 @@ export default function ReportsPage() {
           ) : (
             <div className="text-sm text-white/60">Você ainda não tem grupos.</div>
           )}
-        </div>
-
        
-
 function SummaryCard({
   icon,
   title,
