@@ -4,9 +4,33 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, BarChart3, Users, AlertCircle, Wallet } from "lucide-react";
 
+// ✅ Chart.js
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Legend,
+  Filler,
+  type ChartOptions,
+} from "chart.js";
+import { Line } from "react-chartjs-2";
+
 // reaproveita o mesmo Services do /groups
 import { Services } from "../groups/services";
 import type { Expense } from "../groups/types";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 type Group = {
   id: string;
@@ -39,12 +63,10 @@ function parseExpenseDate(e: Expense): Date | null {
 function parseParticipants(e: Expense): string[] {
   const p: any = (e as any).participants;
 
-  // seu GroupModal trata como array (mesmo sendo Json no prisma) :contentReference[oaicite:2]{index=2}
   if (Array.isArray(p)) {
     return p.filter(Boolean).map((x) => String(x));
   }
 
-  // se vier string JSON
   if (typeof p === "string") {
     try {
       const arr = JSON.parse(p);
@@ -114,6 +136,17 @@ function computeTransfersForGroup(expenses: Expense[], memberEmails: string[]) {
   return { net, transfers };
 }
 
+function formatBRL(v: number) {
+  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function formatDayLabel(yyyyMmDd: string) {
+  // "2026-01-20" -> "20/01"
+  const [y, m, d] = yyyyMmDd.split("-");
+  if (!y || !m || !d) return yyyyMmDd;
+  return `${d}/${m}`;
+}
+
 export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -129,14 +162,13 @@ export default function ReportsPage() {
         const gs = await Services.listGroups();
         setGroups(gs || []);
 
-        // carrega despesas de todos os grupos
         const entries = await Promise.all(
           (gs || []).map(async (g) => {
             try {
               const ex = await Services.listExpenses(g.id);
-              return [g.id, ex || []] as const;
+              return [g.id, (ex || []) as Expense[]] as const;
             } catch {
-return [g.id, [] as Expense[]] as const;
+              return [g.id, [] as Expense[]] as const;
             }
           })
         );
@@ -156,9 +188,7 @@ return [g.id, [] as Expense[]] as const;
 
   const monthStart = useMemo(() => startOfMonth(new Date()), []);
 
-  const allExpenses = useMemo(() => {
-    return Object.values(expensesByGroup).flat();
-  }, [expensesByGroup]);
+  const allExpenses = useMemo(() => Object.values(expensesByGroup).flat(), [expensesByGroup]);
 
   const totalSpentMonth = useMemo(() => {
     let sum = 0;
@@ -172,9 +202,6 @@ return [g.id, [] as Expense[]] as const;
 
   const activeGroups = groups.length;
 
-  // “Pendências” aqui é um placeholder útil:
-  // conta despesas do mês onde você está em participants (ou payer)
-  // (quando você tiver o campo paid/settled, dá pra deixar perfeito)
   const pendingCount = useMemo(() => {
     const me = (typeof window !== "undefined" ? localStorage.getItem("acerto_email") : "") || "";
     if (!me) return 0;
@@ -191,14 +218,12 @@ return [g.id, [] as Expense[]] as const;
     return c;
   }, [allExpenses, monthStart]);
 
-  // Ajustes não acertados = soma total de “transfers” sugeridas em todos os grupos
   const unsettledTransfers = useMemo(() => {
     let total = 0;
 
     for (const g of groups) {
       const ex = expensesByGroup[g.id] || [];
 
-      // pega membros “do jeito fácil”: participants + payer dentro das despesas
       const memberSet = new Set<string>();
       for (const e of ex) {
         const payer = String((e as any).payer || "");
@@ -243,9 +268,56 @@ return [g.id, [] as Expense[]] as const;
     });
   }, [groups, expensesByGroup, monthStart]);
 
-  function formatBRL(v: number) {
-    return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-  }
+  // ✅ Dados do gráfico
+  const chartLabels = useMemo(
+    () => dailySpentThisMonth.map((d) => formatDayLabel(d.day)),
+    [dailySpentThisMonth]
+  );
+  const chartValues = useMemo(() => dailySpentThisMonth.map((d) => d.value), [dailySpentThisMonth]);
+
+  const chartData = useMemo(
+    () => ({
+      labels: chartLabels,
+      datasets: [
+        {
+          label: "Gastos por dia (mês atual)",
+          data: chartValues,
+          tension: 0.35,
+          fill: true,
+          pointRadius: 3,
+          borderWidth: 2,
+        },
+      ],
+    }),
+    [chartLabels, chartValues]
+  );
+
+  const chartOptions: ChartOptions<"line"> = useMemo(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ` ${formatBRL(Number(ctx.raw || 0))}`,
+          },
+        },
+      },
+      scales: {
+        y: {
+          ticks: {
+            callback: (value) => formatBRL(Number(value)),
+          },
+          grid: { display: true },
+        },
+        x: {
+          grid: { display: false },
+        },
+      },
+    }),
+    []
+  );
 
   return (
     <div className="min-h-screen bg-[#071611] text-white relative overflow-hidden">
@@ -306,14 +378,22 @@ return [g.id, [] as Expense[]] as const;
         {/* Evolução */}
         <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
           <h2 className="font-semibold mb-2">Evolução de gastos (mês atual)</h2>
-          <p className="text-sm text-white/60 mb-4">
-            Por enquanto em lista (depois dá pra virar gráfico).
-          </p>
+          <p className="text-sm text-white/60 mb-4">Agora em gráfico (linha).</p>
 
           {loading ? (
             <div className="text-sm text-white/60">Carregando...</div>
           ) : dailySpentThisMonth.length ? (
-            <div className="space-y-2">
+            <div className="h-[280px] rounded-xl border border-white/10 bg-black/20 p-3">
+              <Line data={chartData} options={chartOptions} />
+            </div>
+          ) : (
+            <div className="h-24 rounded-xl border border-dashed border-white/10 flex items-center justify-center text-white/40 text-sm">
+              Sem despesas neste mês ainda.
+            </div>
+          )}
+
+          {!loading && dailySpentThisMonth.length ? (
+            <div className="mt-4 space-y-2">
               {dailySpentThisMonth.map((d) => (
                 <div
                   key={d.day}
@@ -324,11 +404,7 @@ return [g.id, [] as Expense[]] as const;
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="h-24 rounded-xl border border-dashed border-white/10 flex items-center justify-center text-white/40 text-sm">
-              Sem despesas neste mês ainda.
-            </div>
-          )}
+          ) : null}
         </div>
 
         {/* Por grupo */}
