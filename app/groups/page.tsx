@@ -192,16 +192,72 @@ export default function GroupsPage() {
                 </button>
               </div>
 
-              <div className="mt-4 space-y-3 max-h-[520px] overflow-auto pr-1">
-                {groups.map((g) => (
-                  <div key={g.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h4 className="font-semibold truncate">{g.name}</h4>
-                        <p className="text-xs text-white/60 mt-1">
-                          {g.description?.trim() ? g.description : "Sem descrição"}
-                        </p>
-                      </div>
+             <div className="mt-5 max-h-[520px] overflow-auto pr-1">
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    {groups.map((g) => (
+      <div
+        key={g.id}
+        className="group relative rounded-3xl border border-white/10 bg-white/[0.06] p-5 hover:bg-white/[0.08] transition"
+      >
+        {/* brilho sutil no hover */}
+        <div className="pointer-events-none absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition">
+          <div className="absolute -top-24 -right-24 h-56 w-56 rounded-full bg-emerald-500/10 blur-3xl" />
+          <div className="absolute -bottom-24 -left-24 h-56 w-56 rounded-full bg-teal-400/10 blur-3xl" />
+        </div>
+
+        {/* topo */}
+        <div className="relative flex items-start gap-4">
+          <div className="h-12 w-12 rounded-2xl bg-emerald-500/15 border border-emerald-400/20 flex items-center justify-center shrink-0">
+            <Users className="h-5 w-5 text-emerald-300" />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <h4 className="text-lg font-semibold truncate">{g.name}</h4>
+            <p className="text-sm text-white/60 mt-1 line-clamp-2">
+              {g.description?.trim() ? g.description : "Sem descrição"}
+            </p>
+
+            {/* “info extra” leve (sem depender de API) */}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="inline-flex items-center rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] text-white/70">
+                ID: {g.id.slice(0, 8)}…
+              </span>
+              <span className="inline-flex items-center rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] text-white/70">
+                Grupo ativo
+              </span>
+            </div>
+          </div>
+
+          <button
+            className="relative shrink-0 inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition text-sm"
+            onClick={() => setSelectedGroup(g)}
+          >
+            Abrir
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* ações */}
+        <div className="relative mt-5 grid grid-cols-2 gap-2">
+          <button
+            className="rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 py-2.5 text-sm transition"
+            onClick={() => setInviteGroupId(g.id)}
+          >
+            Convidar
+          </button>
+
+          <button
+            className="rounded-xl bg-emerald-500 text-black py-2.5 text-sm font-semibold hover:bg-emerald-400 transition"
+            onClick={() => setSelectedGroup(g)}
+          >
+            Despesas
+          </button>
+        </div>
+      </div>
+    ))}
+  </div>
+</div>
+
 
                       <button
                         className="shrink-0 inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition text-sm"
