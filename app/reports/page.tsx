@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, BarChart3, Users, AlertCircle, Wallet } from "lucide-react";
 
-// ✅ Chart.js
+// Chart.js
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -14,7 +14,6 @@ import {
   Tooltip,
   Legend,
   Filler,
-  type ChartOptions,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
 
@@ -22,15 +21,7 @@ import { Line } from "react-chartjs-2";
 import { Services } from "../groups/services";
 import type { Expense } from "../groups/types";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Tooltip,
-  Legend,
-  Filler
-);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler);
 
 type Group = {
   id: string;
@@ -51,7 +42,7 @@ function sameDayKey(d: Date) {
 
 function parseExpenseDate(e: Expense): Date | null {
   // no seu schema existe created_at e date_iso (string?)
-  // vamos preferir date_iso se existir
+  // preferir date_iso se existir
   const raw: any = (e as any).date_iso || (e as any).created_at || (e as any).createdAt;
   if (!raw) return null;
 
@@ -136,17 +127,6 @@ function computeTransfersForGroup(expenses: Expense[], memberEmails: string[]) {
   return { net, transfers };
 }
 
-function formatBRL(v: number) {
-  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function formatDayLabel(yyyyMmDd: string) {
-  // "2026-01-20" -> "20/01"
-  const [y, m, d] = yyyyMmDd.split("-");
-  if (!y || !m || !d) return yyyyMmDd;
-  return `${d}/${m}`;
-}
-
 export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -166,7 +146,7 @@ export default function ReportsPage() {
           (gs || []).map(async (g) => {
             try {
               const ex = await Services.listExpenses(g.id);
-              return [g.id, (ex || []) as Expense[]] as const;
+              return [g.id, ex || []] as const;
             } catch {
               return [g.id, [] as Expense[]] as const;
             }
@@ -268,51 +248,72 @@ export default function ReportsPage() {
     });
   }, [groups, expensesByGroup, monthStart]);
 
-  // ✅ Dados do gráfico
-  const chartLabels = useMemo(
-    () => dailySpentThisMonth.map((d) => formatDayLabel(d.day)),
-    [dailySpentThisMonth]
-  );
-  const chartValues = useMemo(() => dailySpentThisMonth.map((d) => d.value), [dailySpentThisMonth]);
+  function formatBRL(v: number) {
+    return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  }
+
+  // ---- Chart config (mais claro no tema escuro) ----
+  const chartLabels = dailySpentThisMonth.map((d) => d.day);
+  const chartValues = dailySpentThisMonth.map((d) => d.value);
 
   const chartData = useMemo(
     () => ({
       labels: chartLabels,
       datasets: [
         {
-          label: "Gastos por dia (mês atual)",
+          label: "Gastos por dia",
           data: chartValues,
+          borderColor: "rgba(52, 211, 153, 0.95)", // emerald-400
+          backgroundColor: "rgba(16, 185, 129, 0.20)",
+          pointBackgroundColor: "rgba(110, 231, 183, 1)",
+          pointBorderColor: "rgba(16, 185, 129, 1)",
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          borderWidth: 2,
           tension: 0.35,
           fill: true,
-          pointRadius: 3,
-          borderWidth: 2,
         },
       ],
     }),
     [chartLabels, chartValues]
   );
 
-  const chartOptions: ChartOptions<"line"> = useMemo(
+  const chartOptions = useMemo(
     () => ({
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { display: false },
+        legend: {
+          labels: {
+            color: "rgba(255,255,255,0.80)",
+          },
+        },
         tooltip: {
           callbacks: {
-            label: (ctx) => ` ${formatBRL(Number(ctx.raw || 0))}`,
+            label: (ctx: any) => ` ${formatBRL(Number(ctx.parsed.y || 0))}`,
           },
         },
       },
       scales: {
+        x: {
+          ticks: {
+            color: "rgba(255,255,255,0.70)",
+          },
+          grid: {
+            color: "rgba(255,255,255,0.08)",
+          },
+        },
         y: {
           ticks: {
-            callback: (value) => formatBRL(Number(value)),
+            color: "rgba(255,255,255,0.70)",
+            callback: (value: any) => {
+              const v = Number(value || 0);
+              return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+            },
           },
-          grid: { display: true },
-        },
-        x: {
-          grid: { display: false },
+          grid: {
+            color: "rgba(255,255,255,0.08)",
+          },
         },
       },
     }),
@@ -383,28 +384,29 @@ export default function ReportsPage() {
           {loading ? (
             <div className="text-sm text-white/60">Carregando...</div>
           ) : dailySpentThisMonth.length ? (
-            <div className="h-[280px] rounded-xl border border-white/10 bg-black/20 p-3">
-              <Line data={chartData} options={chartOptions} />
-            </div>
+            <>
+              <div className="h-[260px] rounded-xl border border-white/10 bg-black/20 p-3">
+                <Line data={chartData as any} options={chartOptions as any} />
+              </div>
+
+              {/* lista de apoio */}
+              <div className="mt-4 space-y-2">
+                {dailySpentThisMonth.map((d) => (
+                  <div
+                    key={d.day}
+                    className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm"
+                  >
+                    <span className="text-white/70">{d.day}</span>
+                    <span className="text-emerald-200">{formatBRL(d.value)}</span>
+                  </div>
+                ))}
+              </div>
+            </>
           ) : (
             <div className="h-24 rounded-xl border border-dashed border-white/10 flex items-center justify-center text-white/40 text-sm">
               Sem despesas neste mês ainda.
             </div>
           )}
-
-          {!loading && dailySpentThisMonth.length ? (
-            <div className="mt-4 space-y-2">
-              {dailySpentThisMonth.map((d) => (
-                <div
-                  key={d.day}
-                  className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm"
-                >
-                  <span className="text-white/70">{d.day}</span>
-                  <span className="text-emerald-200">{formatBRL(d.value)}</span>
-                </div>
-              ))}
-            </div>
-          ) : null}
         </div>
 
         {/* Por grupo */}
@@ -428,11 +430,6 @@ export default function ReportsPage() {
           ) : (
             <div className="text-sm text-white/60">Você ainda não tem grupos.</div>
           )}
-        </div>
-
-        {/* Aviso */}
-        <div className="mt-8 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">
-          💡 Dica: os números acima já vêm do banco via APIs usadas em <b>/groups</b>.
         </div>
       </div>
     </div>
