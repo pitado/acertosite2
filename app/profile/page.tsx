@@ -2,9 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Save, ArrowLeft, UserRound, Upload, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Save, ArrowLeft, UserRound, Upload, Trash2, LogOut } from "lucide-react";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 
 export default function ProfilePage() {
+  const router = useRouter();
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
 
@@ -59,14 +63,33 @@ export default function ProfilePage() {
     localStorage.removeItem("acerto_avatar");
   }
 
+  async function logout() {
+    try {
+      const supabase = getSupabaseClient();
+      await supabase?.auth?.signOut();
+    } catch {
+      // mesmo se falhar, segue limpando localStorage
+    }
+
+    // limpa tudo do app
+    const keysToRemove = [
+      "acerto_email",
+      "acerto_uid",
+      "acerto_name",
+      "acerto_avatar",
+      "acerto_google_avatar",
+    ];
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+
+    router.replace("/");
+  }
+
   async function handleFile(file: File) {
     if (!file.type.startsWith("image/")) {
       alert("Envie um arquivo de imagem (PNG, JPG, etc).");
       return;
     }
 
-    // ✅ limite simples (ajuda a não explodir o localStorage)
-    // se precisar, podemos comprimir depois
     const MAX_MB = 2.5;
     if (file.size > MAX_MB * 1024 * 1024) {
       alert(`Imagem muito grande. Tente uma com menos de ${MAX_MB}MB.`);
@@ -98,13 +121,24 @@ export default function ProfilePage() {
             Voltar
           </Link>
 
-          <button
-            onClick={save}
-            className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/90 hover:bg-emerald-500 text-black font-medium px-4 py-2 transition"
-          >
-            <Save className="h-4 w-4" />
-            Salvar
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={logout}
+              className="inline-flex items-center gap-2 rounded-xl border border-red-500/25 bg-red-500/10 hover:bg-red-500/15 px-4 py-2 transition text-red-200"
+              title="Sair da conta"
+            >
+              <LogOut className="h-4 w-4" />
+              Sair
+            </button>
+
+            <button
+              onClick={save}
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/90 hover:bg-emerald-500 text-black font-medium px-4 py-2 transition"
+            >
+              <Save className="h-4 w-4" />
+              Salvar
+            </button>
+          </div>
         </div>
 
         <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
@@ -112,11 +146,7 @@ export default function ProfilePage() {
             <div className="h-16 w-16 rounded-2xl overflow-hidden border border-white/10 bg-white/10 flex items-center justify-center">
               {avatarToShow ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={avatarToShow}
-                  alt="Avatar"
-                  className="h-full w-full object-cover"
-                />
+                <img src={avatarToShow} alt="Avatar" className="h-full w-full object-cover" />
               ) : (
                 <span className="text-xl font-semibold">{initial}</span>
               )}
@@ -124,9 +154,7 @@ export default function ProfilePage() {
 
             <div className="leading-tight">
               <h1 className="text-xl font-semibold">Perfil</h1>
-              <p className="text-sm text-white/60">
-                Personalize seu nome e avatar.
-              </p>
+              <p className="text-sm text-white/60">Personalize seu nome e avatar.</p>
             </div>
           </div>
 
@@ -181,9 +209,7 @@ export default function ProfilePage() {
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 text-white/80">
                     <Upload className="h-4 w-4" />
-                    <span className="text-sm">
-                      Arraste uma imagem aqui ou clique para enviar
-                    </span>
+                    <span className="text-sm">Arraste uma imagem aqui ou clique para enviar</span>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -217,7 +243,6 @@ export default function ProfilePage() {
                   onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (file) await handleFile(file);
-                    // limpa o input pra permitir selecionar o mesmo arquivo de novo
                     e.currentTarget.value = "";
                   }}
                 />
@@ -231,7 +256,6 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* dica: mostrar limite */}
         <p className="mt-4 text-xs text-white/40">
           Dica: use uma imagem pequena (ex.: 256x256) pra não pesar no armazenamento.
         </p>
