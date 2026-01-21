@@ -40,8 +40,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
 
   useEffect(() => {
-    const saved =
-      typeof window !== "undefined" ? localStorage.getItem("acerto_email") : null;
+    const saved = typeof window !== "undefined" ? localStorage.getItem("acerto_email") : null;
     if (saved) router.replace("/groups");
   }, [router]);
 
@@ -59,9 +58,7 @@ export default function LoginPage() {
     }
 
     const redirectTo =
-      typeof window !== "undefined"
-        ? `${window.location.origin}/auth/callback`
-        : undefined;
+      typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined;
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -111,11 +108,9 @@ export default function LoginPage() {
         return;
       }
 
-      // mantém o padrão do app (igual o callback do Google)
       localStorage.setItem("acerto_email", user.email);
       localStorage.setItem("acerto_uid", user.id || "");
       localStorage.setItem("acerto_name", user.name || user.email.split("@")[0] || "");
-      // sem avatar no cadastro normal:
       localStorage.setItem("acerto_avatar", user.avatarUrl || "");
 
       router.replace("/groups");
@@ -135,36 +130,33 @@ export default function LoginPage() {
         <div className="absolute bottom-[-200px] left-1/3 h-[620px] w-[620px] rounded-full bg-green-500/10 blur-3xl" />
       </div>
 
-      <div className="relative w-full max-w-md">
-        <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-8">
-          <img src="/logo.svg" alt="Acertô" className="h-44 w-44 mx-auto mb-4" />
+      {/* ✅ mais largo */}
+      <div className="relative w-full max-w-lg">
+        {/* ✅ um pouco menos padding pra não “empurrar” pra baixo */}
+        <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-7">
+          {/* ✅ logo menor pra caber tudo sem rolagem */}
+          <img src="/logo.svg" alt="Acertô" className="h-28 w-28 mx-auto mb-3" />
 
-          <h1 className="text-center text-2xl font-semibold tracking-tight">
-            Bem-vindo ao Acertô
-          </h1>
+          <h1 className="text-center text-2xl font-semibold tracking-tight">Bem-vindo ao Acertô</h1>
 
-          <p className="mt-1 text-center text-sm text-white/60">
-            A dívida vai, a amizade fica.
-          </p>
+          <p className="mt-1 text-center text-sm text-white/60">A dívida vai, a amizade fica.</p>
 
           {/* GOOGLE (mantém igual) */}
           <button
             onClick={handleGoogle}
             disabled={loadingGoogle}
-            className="mt-6 w-full inline-flex items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-4 py-3 transition disabled:opacity-60"
+            className="mt-5 w-full inline-flex items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-4 py-3 transition disabled:opacity-60"
           >
             <GoogleIcon className="h-5 w-5" />
-            <span className="font-medium">
-              {loadingGoogle ? "Conectando..." : "Continuar com Google"}
-            </span>
+            <span className="font-medium">{loadingGoogle ? "Conectando..." : "Continuar com Google"}</span>
           </button>
 
-          <p className="mt-5 text-center text-xs text-white/50">
+          <p className="mt-4 text-center text-xs text-white/50">
             Entre com sua conta Google para criar grupos, dividir despesas e acompanhar seus acertos.
           </p>
 
           {/* DIVISOR */}
-          <div className="mt-6 flex items-center gap-3">
+          <div className="mt-5 flex items-center gap-3">
             <div className="h-px flex-1 bg-white/10" />
             <span className="text-[11px] text-white/40">ou</span>
             <div className="h-px flex-1 bg-white/10" />
@@ -230,9 +222,7 @@ export default function LoginPage() {
                 placeholder="••••••••"
                 autoComplete={mode === "register" ? "new-password" : "current-password"}
               />
-              <p className="mt-1 text-[11px] text-white/40">
-                Mínimo 6 caracteres.
-              </p>
+              <p className="mt-1 text-[11px] text-white/40">Mínimo 6 caracteres.</p>
             </div>
 
             <button
@@ -240,11 +230,7 @@ export default function LoginPage() {
               disabled={loadingEmail}
               className="w-full rounded-xl bg-emerald-500 px-4 py-3 text-black font-semibold hover:bg-emerald-400 transition disabled:opacity-60"
             >
-              {loadingEmail
-                ? "Aguarde..."
-                : mode === "register"
-                ? "Criar conta"
-                : "Entrar"}
+              {loadingEmail ? "Aguarde..." : mode === "register" ? "Criar conta" : "Entrar"}
             </button>
           </div>
 
