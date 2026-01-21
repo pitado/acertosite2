@@ -14,19 +14,17 @@ enum Role {
 }
 
 model User {
-  id        String  @id @default(cuid())
-  email     String  @unique
-  name      String?
-  avatarUrl String?
+  id           String  @id @default(cuid())
+  email        String  @unique
+  name         String?
+  avatarUrl    String?
 
-  // ✅ NOVO: para login por e-mail/senha (hash, nunca senha pura)
+  // ✅ login por e-mail/senha (hash, nunca senha pura)
   passwordHash String?
 
-  createdAt DateTime @default(now())
-  // ✅ evita erro em db push quando já existem linhas
-  updatedAt DateTime @default(now()) @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
 
-  // Relações
   ownedGroups    Group[]       @relation("UserOwnedGroups")
   memberships    GroupMember[]
   invitesCreated Invite[]      @relation("InviteCreator")
@@ -50,7 +48,7 @@ model Group {
   expenses Expense[]
   activity LogEntry[]
 
-  // ✅ tabela com nome “normal” no MySQL (evita conflito/keyword)
+  // ✅ evita conflito com palavra reservada/nomes
   @@map("groups")
 }
 
@@ -74,15 +72,13 @@ model GroupMember {
 }
 
 model Invite {
-  token String @id
+  token String @id @default(cuid())
 
   groupId String
   group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
-  // opcional: se quiser convite por email específico no futuro
   email String?
-
-  role Role @default(MEMBER)
+  role  Role @default(MEMBER)
 
   expiresAt DateTime?
   usedAt    DateTime?
@@ -110,7 +106,6 @@ model Expense {
   buyer String
   payer String
 
-  // split (texto livre por enquanto)
   split        String
   participants Json
 
@@ -135,7 +130,7 @@ model LogEntry {
   groupId String
   group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
-  message String
+  message    String
   created_at DateTime @default(now())
 
   @@index([groupId])
