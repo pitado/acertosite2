@@ -18,8 +18,8 @@ model User {
   email     String  @unique
   name      String?
   avatarUrl String?
-
- passwordHash String?
+// ✅ NOVO: para login por e-mail/senha
+  passwordHash String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
