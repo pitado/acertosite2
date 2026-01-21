@@ -48,14 +48,6 @@ function formatBRL(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function formatDateShort(d: Date) {
-  try {
-    return d.toLocaleDateString("pt-BR");
-  } catch {
-    return d.toLocaleDateString();
-  }
-}
-
 export default function GroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [name, setName] = useState("");
@@ -288,7 +280,8 @@ export default function GroupsPage() {
               </div>
 
               <div className="mt-5 max-h-[520px] overflow-auto pr-1">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* ✅ Mobile: 1 por linha; só vira 2 colunas a partir de md */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {groups.map((g) => {
                     const pv = previews[g.id];
 
@@ -309,30 +302,34 @@ export default function GroupsPage() {
                           <div className="absolute -bottom-24 -left-24 h-56 w-56 rounded-full bg-teal-400/10 blur-3xl" />
                         </div>
 
-                        <div className="relative p-5 flex flex-col h-full">
-                          {/* topo */}
-                          <div className="flex items-start gap-4">
-                            <div className="h-12 w-12 rounded-2xl bg-emerald-500/15 border border-emerald-400/20 flex items-center justify-center shrink-0">
-                              <Users className="h-5 w-5 text-emerald-300" />
-                            </div>
-
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <h4 className="text-lg font-semibold truncate min-w-0">{g.name}</h4>
-
-                                <span className="hidden sm:inline-flex shrink-0 items-center rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[11px] text-white/60">
-                                  ID {g.id.slice(0, 6)}…
-                                </span>
+                        <div className="relative p-5">
+                          {/* header do card (mais “folgado” no mobile) */}
+                          <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                            <div className="flex items-start gap-4 min-w-0 flex-1">
+                              <div className="h-12 w-12 rounded-2xl bg-emerald-500/15 border border-emerald-400/20 flex items-center justify-center shrink-0">
+                                <Users className="h-5 w-5 text-emerald-300" />
                               </div>
 
-                              <p className="text-sm text-white/60 mt-1 line-clamp-2">
-                                {g.description?.trim() ? g.description : "Sem descrição"}
-                              </p>
+                              <div className="min-w-0 flex-1">
+                                {/* ✅ sem truncate: deixa quebrar */}
+                                <h4 className="text-lg font-semibold leading-tight break-words">
+                                  {g.name}
+                                </h4>
+
+                                {/* ID embaixo (não espreme o título) */}
+                                <div className="mt-1 inline-flex items-center rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[11px] text-white/60">
+                                  ID {g.id.slice(0, 8)}…
+                                </div>
+
+                                <p className="text-sm text-white/60 mt-2 line-clamp-2">
+                                  {g.description?.trim() ? g.description : "Sem descrição"}
+                                </p>
+                              </div>
                             </div>
 
-                            {/* botão “Abrir” (não bagunça o layout) */}
+                            {/* botão separado, não “aperta” o título */}
                             <button
-                              className="shrink-0 inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition text-sm"
+                              className="shrink-0 inline-flex items-center justify-center gap-1 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition text-sm self-start"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setSelectedGroup(g);
@@ -343,31 +340,32 @@ export default function GroupsPage() {
                             </button>
                           </div>
 
-                          {/* stats (mais estável no mobile) */}
-                          <div className="mt-4 grid grid-cols-3 gap-2">
-                            <div className="min-w-0 rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
+                          {/* stats (sem truncar no mobile) */}
+                          <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {/* ✅ total ocupa 2 colunas no mobile para caber R$ */}
+                            <div className="col-span-2 sm:col-span-1 rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
                               <div className="text-[11px] text-white/50">Total mês</div>
-                              <div className="truncate text-sm font-semibold text-emerald-200">
+                              <div className="text-sm font-semibold text-emerald-200 whitespace-nowrap">
                                 {pv ? formatBRL(pv.monthTotal) : "—"}
                               </div>
                             </div>
 
-                            <div className="min-w-0 rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
+                            <div className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
                               <div className="text-[11px] text-white/50">Despesas</div>
-                              <div className="truncate text-sm font-semibold text-white/85">
+                              <div className="text-sm font-semibold text-white/85">
                                 {pv ? pv.expenseCount : "—"}
                               </div>
                             </div>
 
-                            <div className="min-w-0 rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
+                            <div className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
                               <div className="text-[11px] text-white/50">Atualizado</div>
-                              <div className="truncate text-sm font-semibold text-white/85">
-                                {pv?.lastAt ? formatDateShort(pv.lastAt) : "—"}
+                              <div className="text-sm font-semibold text-white/85 whitespace-nowrap">
+                                {pv?.lastAt ? pv.lastAt.toLocaleDateString("pt-BR") : "—"}
                               </div>
                             </div>
                           </div>
 
-                          {/* últimas despesas (mais leve e alinhado) */}
+                          {/* últimas despesas */}
                           <div className="mt-4">
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-medium text-white/80">Últimas despesas</span>
@@ -388,19 +386,19 @@ export default function GroupsPage() {
                                     <div
                                       key={e.id}
                                       className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5"
+                                      onClick={(ev) => ev.stopPropagation()}
                                     >
                                       <div className="flex items-start justify-between gap-3">
                                         <div className="min-w-0">
-                                          <div className="truncate text-sm font-medium text-white/85">
+                                          <div className="text-sm font-medium text-white/85 break-words">
                                             {String(e.title || "Despesa")}
                                           </div>
                                           <div className="mt-0.5 text-[12px] text-white/45 truncate">
-                                            {dt ? formatDateShort(dt) : ""}
+                                            {dt ? dt.toLocaleDateString("pt-BR") : ""}
                                             {e.payer ? ` • ${String(e.payer)}` : ""}
                                           </div>
                                         </div>
-
-                                        <div className="shrink-0 text-sm font-semibold text-emerald-200">
+                                        <div className="shrink-0 text-sm font-semibold text-emerald-200 whitespace-nowrap">
                                           {formatBRL(Number(e.amount || 0))}
                                         </div>
                                       </div>
@@ -411,7 +409,7 @@ export default function GroupsPage() {
                             )}
                           </div>
 
-                          {/* ações (sempre no “rodapé” do card) */}
+                          {/* ações */}
                           <div className="mt-4 grid grid-cols-2 gap-2">
                             <button
                               className="rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 py-2.5 text-sm transition"
