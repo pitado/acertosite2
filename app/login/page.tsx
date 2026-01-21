@@ -29,27 +29,32 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
 
 export default function LoginPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+
+  const [loadingGoogle, setLoadingGoogle] = useState(false);
+  const [loadingEmail, setLoadingEmail] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
   useEffect(() => {
-    const email =
-      typeof window !== "undefined"
-        ? localStorage.getItem("acerto_email")
-        : null;
-    if (email) router.replace("/groups");
+    const saved =
+      typeof window !== "undefined" ? localStorage.getItem("acerto_email") : null;
+    if (saved) router.replace("/groups");
   }, [router]);
 
   async function handleGoogle() {
     setErr(null);
-    setLoading(true);
+    setLoadingGoogle(true);
 
     const supabase = getSupabaseClient();
     if (!supabase) {
       setErr(
         "Supabase não configurado. Verifique NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY."
       );
-      setLoading(false);
+      setLoadingGoogle(false);
       return;
     }
 
@@ -65,11 +70,60 @@ export default function LoginPage() {
 
     if (error) {
       setErr(error.message);
-      setLoading(false);
+      setLoadingGoogle(false);
       return;
     }
 
-    setLoading(false);
+    setLoadingGoogle(false);
+  }
+
+  async function submitEmailPassword() {
+    setErr(null);
+    setLoadingEmail(true);
+
+    try {
+      const endpoint = mode === "register" ? "/api/auth/register" : "/api/auth/login";
+
+      const payload: any = {
+        email: email.trim(),
+        password,
+      };
+      if (mode === "register") payload.name = name.trim();
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setErr(data?.error || "Erro ao autenticar.");
+        setLoadingEmail(false);
+        return;
+      }
+
+      const user = data?.user;
+      if (!user?.email) {
+        setErr("Resposta inválida do servidor.");
+        setLoadingEmail(false);
+        return;
+      }
+
+      // mantém o padrão do app (igual o callback do Google)
+      localStorage.setItem("acerto_email", user.email);
+      localStorage.setItem("acerto_uid", user.id || "");
+      localStorage.setItem("acerto_name", user.name || user.email.split("@")[0] || "");
+      // sem avatar no cadastro normal:
+      localStorage.setItem("acerto_avatar", user.avatarUrl || "");
+
+      router.replace("/groups");
+    } catch (e: any) {
+      setErr(e?.message || "Erro inesperado.");
+    } finally {
+      setLoadingEmail(false);
+    }
   }
 
   return (
@@ -83,13 +137,7 @@ export default function LoginPage() {
 
       <div className="relative w-full max-w-md">
         <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-8">
-          {/* 🐷 PORCO MAIOR – SEM CAIXA */}
-          <img
-  src="/logo.svg"
-  alt="Acertô"
-  className="h-44 w-44 mx-auto mb-4"
-/>
-
+          <img src="/logo.svg" alt="Acertô" className="h-44 w-44 mx-auto mb-4" />
 
           <h1 className="text-center text-2xl font-semibold tracking-tight">
             Bem-vindo ao Acertô
@@ -99,20 +147,106 @@ export default function LoginPage() {
             A dívida vai, a amizade fica.
           </p>
 
+          {/* GOOGLE (mantém igual) */}
           <button
             onClick={handleGoogle}
-            disabled={loading}
+            disabled={loadingGoogle}
             className="mt-6 w-full inline-flex items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-4 py-3 transition disabled:opacity-60"
           >
             <GoogleIcon className="h-5 w-5" />
             <span className="font-medium">
-              {loading ? "Conectando..." : "Continuar com Google"}
+              {loadingGoogle ? "Conectando..." : "Continuar com Google"}
             </span>
           </button>
 
           <p className="mt-5 text-center text-xs text-white/50">
             Entre com sua conta Google para criar grupos, dividir despesas e acompanhar seus acertos.
           </p>
+
+          {/* DIVISOR */}
+          <div className="mt-6 flex items-center gap-3">
+            <div className="h-px flex-1 bg-white/10" />
+            <span className="text-[11px] text-white/40">ou</span>
+            <div className="h-px flex-1 bg-white/10" />
+          </div>
+
+          {/* TABS */}
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setMode("login")}
+              className={`rounded-xl border px-3 py-2 text-sm transition ${
+                mode === "login"
+                  ? "border-emerald-400/30 bg-emerald-500/15 text-emerald-100"
+                  : "border-white/10 bg-white/5 hover:bg-white/10 text-white/70"
+              }`}
+            >
+              Entrar
+            </button>
+            <button
+              onClick={() => setMode("register")}
+              className={`rounded-xl border px-3 py-2 text-sm transition ${
+                mode === "register"
+                  ? "border-emerald-400/30 bg-emerald-500/15 text-emerald-100"
+                  : "border-white/10 bg-white/5 hover:bg-white/10 text-white/70"
+              }`}
+            >
+              Criar conta
+            </button>
+          </div>
+
+          {/* FORM */}
+          <div className="mt-4 space-y-3">
+            {mode === "register" && (
+              <div>
+                <label className="text-xs text-white/60">Nome</label>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm outline-none focus:border-emerald-400/30"
+                  placeholder="Seu nome"
+                  autoComplete="name"
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="text-xs text-white/60">E-mail</label>
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm outline-none focus:border-emerald-400/30"
+                placeholder="voce@exemplo.com"
+                autoComplete="email"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-white/60">Senha</label>
+              <input
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                type="password"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm outline-none focus:border-emerald-400/30"
+                placeholder="••••••••"
+                autoComplete={mode === "register" ? "new-password" : "current-password"}
+              />
+              <p className="mt-1 text-[11px] text-white/40">
+                Mínimo 6 caracteres.
+              </p>
+            </div>
+
+            <button
+              onClick={submitEmailPassword}
+              disabled={loadingEmail}
+              className="w-full rounded-xl bg-emerald-500 px-4 py-3 text-black font-semibold hover:bg-emerald-400 transition disabled:opacity-60"
+            >
+              {loadingEmail
+                ? "Aguarde..."
+                : mode === "register"
+                ? "Criar conta"
+                : "Entrar"}
+            </button>
+          </div>
 
           {err && (
             <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
