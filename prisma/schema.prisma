@@ -19,18 +19,9 @@ model User {
   name      String?
   avatarUrl String?
 
-  // ✅ NOVO: para login por e-mail/senha
+  // ✅ NOVO: para login por e-mail/senha (hash, nunca senha pura)
   passwordHash String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
-
-  ownedGroups    Group[]       @relation("UserOwnedGroups")
-  memberships    GroupMember[]
-  invitesCreated Invite[]      @relation("InviteCreator")
-
-  @@map("users")
-}
   createdAt DateTime @default(now())
   // ✅ evita erro em db push quando já existem linhas
   updatedAt DateTime @default(now()) @updatedAt
@@ -59,7 +50,7 @@ model Group {
   expenses Expense[]
   activity LogEntry[]
 
-  // ✅ tabela com nome “normal” no MySQL (evita erro do GROUP)
+  // ✅ tabela com nome “normal” no MySQL (evita conflito/keyword)
   @@map("groups")
 }
 
