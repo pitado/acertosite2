@@ -18,7 +18,8 @@ model User {
   email     String  @unique
   name      String?
   avatarUrl String?
-// ✅ NOVO: para login por e-mail/senha
+
+  // ✅ NOVO: para login por e-mail/senha
   passwordHash String?
 
   createdAt DateTime @default(now())
@@ -30,7 +31,6 @@ model User {
 
   @@map("users")
 }
-
   createdAt DateTime @default(now())
   // ✅ evita erro em db push quando já existem linhas
   updatedAt DateTime @default(now()) @updatedAt
